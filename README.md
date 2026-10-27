@@ -1,6 +1,7 @@
 # Simit Fırını
 
 **Play online:** https://furkiozknn.github.io/simit-firini/ (desktop and phone, no install)
+
 ![Simit Fırını gameplay: the bakery and simit sellers on the street](docs/gameplay.gif)
 
 A 3D simit bakery tycoon on an old Istanbul street. One `index.html`, Three.js r170, no build step, no external assets.
