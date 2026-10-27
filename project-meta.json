@@ -36,8 +36,8 @@
   "media": {
     "hero": "docs/gameplay.png",
     "screenshots": [
-      "docs/title.png",
       "docs/gameplay.png",
+      "docs/title.png",
       "docs/plan.png",
       "docs/panels.png",
       "docs/summary.png",
