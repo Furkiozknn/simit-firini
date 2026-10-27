@@ -130,10 +130,12 @@ the sound effects. No asset files are used; Three.js and the Fredoka and Nunito 
 [CREDITS.md](CREDITS.md).
 
 Simit Fırını is part of the **Claude Game Arena** series, where each game is built by a Claude model from one prompt.
-The other games: [Kervan](https://furkiozknn.github.io/kervan/) · [Dolmuş](https://furkiozknn.github.io/dolmus/) ·
-[Peri Golf](https://furkiozknn.github.io/peri-golf/) · [Mehter](https://furkiozknn.github.io/mehter/) ·
-[Boğaz Vapuru](https://furkiozknn.github.io/bogaz-vapuru/) · [Karagöz](https://furkiozknn.github.io/karagoz/) ·
-[Lale Bahçesi](https://furkiozknn.github.io/lale-bahcesi/)
+The other games: [Hisar](https://furkiozknn.github.io/kale-savunmasi/) ·
+[Çay Ocağı](https://furkiozknn.github.io/cay-ocagi/) · [Çini Ustası](https://furkiozknn.github.io/cini-ustasi/) ·
+[Martı](https://furkiozknn.github.io/marti/) · [Kervan](https://furkiozknn.github.io/kervan/) ·
+[Dolmuş](https://furkiozknn.github.io/dolmus/) · [Peri Golf](https://furkiozknn.github.io/peri-golf/) ·
+[Mehter](https://furkiozknn.github.io/mehter/) · [Boğaz Vapuru](https://furkiozknn.github.io/bogaz-vapuru/) ·
+[Karagöz](https://furkiozknn.github.io/karagoz/) · [Lale Bahçesi](https://furkiozknn.github.io/lale-bahcesi/)
 
 ## Türkçe
 
