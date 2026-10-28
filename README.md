@@ -18,6 +18,10 @@
 
 <p align="center"><b>Play online: <a href="https://furkiozknn.github.io/simit-firini/">https://furkiozknn.github.io/simit-firini/</a></b> (desktop and phone, no install)</p>
 
+<!-- portals:start -->
+<p align="center">Also on: <a href="https://furkiozknn.itch.io/simit-firini">itch.io</a></p>
+<!-- portals:end -->
+
 ## Highlights
 
 - **A full production chain.** Five stations (kneading, shaping, molasses, sesame, oven) staffed by workers who gain
@@ -157,3 +161,5 @@ oynanır. Claude Sonnet 5.5 tarafından Claude Code ile tek bir prompt'tan yapı
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+Like the game? You can support new rounds on [Buy Me a Coffee](https://buymeacoffee.com/furkiozkann). The game stays free.
