@@ -103,13 +103,24 @@ The live state is on `window.simitfirini`.
     <td width="33%"><img src="docs/plan.png" alt="Day plan, staff tab"><br><sub>Day plan: staff</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/panels.png" alt="Sales panel and pier demand chart"><br><sub>Sales and pier demand</sub></td>
+    <td><img src="docs/panels.png" alt="Pause menu on a chalkboard"><br><sub>Pause menu</sub></td>
     <td><img src="docs/summary.png" alt="End of day summary"><br><sub>End of day summary</sub></td>
     <td><img src="docs/win.png" alt="Win screen: the most famous bakery on the street"><br><sub>The most famous bakery on the street</sub></td>
   </tr>
 </table>
 
 <p align="center"><img src="docs/phone.png" width="300" alt="Simit Fırını on a phone"><br><sub>On a phone</sub></p>
+
+## Redesign (2026-11)
+
+**Art direction:** a hand-painted 2.5D bakery. Palette: crust `#B5651D`, sesame `#E6C27A`, oven glow `#FF7A1A`, flour white `#FAF3E6`, tiled blue `#2C5F8A`. Wood-fired oven glow with flicker, steam and flour dust motes; menus are chalkboards, the day summary is a baker-paper receipt.
+
+![Before and after](docs/redesign-before-after.png)
+
+- **Visual:** painted palette and warm lighting, cobblestone street and tiled bakery floor textures, props and dressed buildings, characters with idle bobs, oven flame, steam and flour FX.
+- **UI:** chalkboard modals with a self-hosted chalk font, title bunting, wooden top bar, receipt-style summary; phone portrait and landscape layouts checked.
+- **Kept:** all rules, recipes, balance numbers, saves, `?auto` bot, flags and i18n are unchanged.
+- **Measured** (headless Chrome, Intel UHD 620, 1280x720): 60 fps in play before and after; draw calls 20 -> 28; triangles 25.6k -> 51.6k; `?auto` bot wins on day 17 with 0 JS errors, with and without `?noassets`.
 
 ## Balance
 
