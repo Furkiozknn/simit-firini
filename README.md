@@ -118,7 +118,7 @@ The live state is on `window.simitfirini`.
 ![Before and after](docs/redesign-before-after.png)
 
 - **Visual:** painted palette and warm lighting, cobblestone street and tiled bakery floor textures, props and dressed buildings, characters with idle bobs, oven flame, steam and flour FX.
-- **UI:** chalkboard modals with a self-hosted chalk font, title bunting, wooden top bar, receipt-style summary; phone portrait and landscape layouts checked.
+- **UI:** chalkboard modals with a self-hosted chalk font, title bunting, wooden top bar, receipt-style summary; phone portrait title and gameplay checked (landscape and phone modals not re-checked).
 - **Kept:** all rules, recipes, balance numbers, saves, `?auto` bot, flags and i18n are unchanged.
 - **Measured** (headless Chrome, Intel UHD 620, 1280x720): 60 fps in play before and after; draw calls 20 -> 28; triangles 25.6k -> 51.6k; `?auto` bot wins on day 17 with 0 JS errors, with and without `?noassets`.
 
