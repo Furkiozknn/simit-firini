@@ -15,7 +15,7 @@
     "Three.js r170",
     "Web Audio API"
   ],
-  "version": null,
+  "version": "2.0.0",
   "license": "MIT",
   "topics": [
     "browser-game",
@@ -25,24 +25,23 @@
     "claude-code",
     "claude-game-arena"
   ],
-  "summary": "3D simit bakery tycoon on an old Istanbul street, built by Claude Sonnet 5.5 · Eski bir İstanbul sokağında 3D simit fırını işletme oyunu, Claude Sonnet 5.5 yaptı",
+  "summary": "3D simit bakery tycoon on an old Istanbul street, redesigned as a hand-painted 2.5D bakery with a chalkboard UI, built by Claude Sonnet 5.5 · Eski bir İstanbul sokağında 3D simit fırını işletme oyunu, el boyaması 2.5D fırın ve kara tahta arayüzüyle yeniden tasarlandı, Claude Sonnet 5.5 yaptı",
   "key_features": [
-    "Five stations from kneading to the oven; an unattended oven burns the bread",
-    "Simit sellers carry trays to the pier, school, park, office and tea houses; demand follows the hour and weather",
-    "Plan each day: production, prices, supply, staff, upgrades and contracts; poğaça, açma, çatal and pide unlock",
-    "Goal: 5,000 lira and 4 stars of reputation by day 20, then endless mode",
-    "A sensible bot wins in roughly 9 of 12 seeds (day 16-20); a careless one goes bankrupt around day 7"
+    "A full production chain: knead, shape, dip in molasses, roll in sesame and bake; an unattended oven burns the bread",
+    "Redesign: painted textures, a wood-fired oven glow with flicker, steam and flour dust, cobblestones, blue-shutter houses and a simit cart",
+    "Redesign: chalkboard menus with a self-hosted chalk font, a wooden top bar and a baker-paper receipt for the day summary; phone portrait and landscape layouts",
+    "Simit sellers carry trays to the pier, the school, the park, the office and the tea houses; demand follows the hour and the weather",
+    "Measured after the redesign: 60 fps in play, 20 -> 28 draw calls; the ?auto bot wins on day 17 with 0 JS errors"
   ],
   "media": {
     "hero": "docs/gameplay.png",
     "screenshots": [
       "docs/card.jpg",
       "docs/gameplay.png",
+      "docs/redesign-before-after.png",
       "docs/title.png",
       "docs/plan.png",
-      "docs/panels.png",
       "docs/summary.png",
-      "docs/win.png",
       "docs/phone.png"
     ],
     "gifs": [
@@ -75,8 +74,9 @@
     "primary_link": "https://furkiozknn.github.io/simit-firini/"
   },
   "provenance": {
-    "generated_at": "2026-10-27",
+    "generated_at": "2026-10-28",
     "generator": "hand-written",
-    "rule": "mechanical fields read from the repository; editorial fields hand-written from the README, index.html, CREDITS.md and the video-studio analiz.md; no field is generated from a guess"
+    "rule": "mechanical fields read from the repository; editorial fields hand-written from the README, index.html, CREDITS.md and the video-studio analiz.md; no field is generated from a guess",
+    "note": "visual redesign 2026-11-02"
   }
 }

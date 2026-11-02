@@ -13,7 +13,7 @@
 <p align="center"><b>A 3D simit bakery tycoon on an old Istanbul street: knead, shape, dip in molasses, roll in sesame and bake, then send simit sellers with trays to the pier, the school, the park, the office and the tea houses.</b></p>
 
 <p align="center">
-  <img src="docs/gameplay.gif" width="640" alt="Simit Fırını gameplay: the bakery and simit sellers on the street">
+  <img src="docs/gameplay.gif" width="640" alt="Simit Fırını gameplay after the redesign: the hand-painted bakery street with the glowing oven, workers at the stations and simit sellers walking to their spots">
 </p>
 
 <p align="center"><b>Play online: <a href="https://furkiozknn.github.io/simit-firini/">https://furkiozknn.github.io/simit-firini/</a></b> (desktop and phone, no install)</p>
