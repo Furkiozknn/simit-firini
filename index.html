@@ -18,8 +18,19 @@
 <script>
 // error capture before anything else loads (shown by ?debug)
 window.__errors = [];
+// Resolve locale from URL ?lang, stored settings, or navigator.language for pre-module boot UI
+window.__bootLang = (function () {
+  try {
+    var q = new URLSearchParams(location.search).get('lang');
+    if (q === 'en' || q === 'tr') return q;
+    var s = JSON.parse(localStorage.getItem('arena.simitfirini.settings') || 'null');
+    if (s && (s.lang === 'en' || s.lang === 'tr')) return s.lang;
+  } catch (e) {}
+  return /^tr/i.test(navigator.language || '') ? 'tr' : 'en';
+})();
+requestAnimationFrame(function () { var m = document.getElementById('loadmsg'); if (m && !window.__t) m.textContent = window.__bootLang === 'en' ? 'Loading… 0/2' : 'Yükleniyor… 0/2'; });
 window.addEventListener('error', function (e) { window.__errors.push(String(e.message || e) + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
-window.__bootTimer = setTimeout(function () { var m = document.getElementById('loadmsg'); if (m) m.textContent = 'Could not load Three.js / Three.js yüklenemedi (internet?)'; }, 12000);
+window.__bootTimer = setTimeout(function () { var m = document.getElementById('loadmsg'); if (m) m.textContent = window.__t ? window.__t('loadfail') : (window.__bootLang === 'en' ? 'Could not load Three.js. Check your connection and reload the page.' : 'Three.js yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.'); }, 12000);
 window.addEventListener('unhandledrejection', function (e) { window.__errors.push('promise: ' + String(e.reason && e.reason.message || e.reason)); });
 </script>
 <style>
@@ -285,7 +296,7 @@ table.t td { padding: 6px 4px; text-align: right; border-top: 1px dashed var(--l
       <button class="btn" id="bCont"></button>
       <div class="row"><button class="btn grow" id="bSet"></button><button class="btn" id="bLangT"></button></div>
     </div>
-    <div id="loadmsg">Loading… 0/2</div>
+    <div id="loadmsg"></div>
     <div class="best" id="tBest"></div>
   </div>
 </div>
@@ -2490,10 +2501,12 @@ function saveGame() { store.set(KEY.save, { v: 1, S }); }
 // =============================================================================================
 // MAIN: flow, events, input, loop, test hooks
 // =============================================================================================
+window.__t = t;
 window.__bootTimer && clearTimeout(window.__bootTimer);
 const assetsInfo = { mode: 'procedural', loaded: [], failed: [], note: 'All geometry, textures and sounds are generated in code; no external assets are used.' };
 
 function setLoad(n) { ui.loadN = n; $('loadmsg').textContent = t('loading', n, 2); }
+setLoad(0);
 function resetVisual() {
   crowd.forEach((c, i) => { if (i >= 16) c.on = false; }); agents.clear(); van.t = -1; if (world.parts.van) world.parts.van.visible = false;
   sel = null; ui.selWorker = 0; hoverKey = '';
