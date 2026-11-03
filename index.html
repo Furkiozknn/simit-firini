@@ -122,6 +122,10 @@ svg.arrow { width: 12px; height: 12px; }
 .toast svg { width: 20px; height: 20px; flex: none; }
 .toast.out { opacity: 0; transform: translateY(-6px); transition: all .25s; }
 @keyframes tin { from { opacity: 0; transform: translateY(-8px) rotate(-1deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast.glass { animation: none; }
+  .toast.out { transition: none; }
+}
 
 /* panels */
 .panel { position: fixed; z-index: 15; padding: 14px; overflow: auto; scrollbar-width: thin; max-height: calc(100% - var(--hudH) - 92px); }
@@ -265,10 +269,10 @@ table.t td { padding: 6px 4px; text-align: right; border-top: 1px dashed var(--l
   </div>
   <div class="tools">
     <div class="seg" id="speedSeg" role="group"><button class="btn" data-speed="1">1x</button><button class="btn" data-speed="2">2x</button><button class="btn" data-speed="4">4x</button></div>
-    <button class="btn icon" id="bPause"></button>
-    <button class="btn icon" id="bMusic"></button>
-    <button class="btn icon" id="bSfx"></button>
-    <button class="btn icon" id="bLang"></button>
+    <button class="btn icon" id="bPause" aria-label="Pause"></button>
+    <button class="btn icon" id="bMusic" aria-label="Music"></button>
+    <button class="btn icon" id="bSfx" aria-label="SFX"></button>
+    <button class="btn icon" id="bLang" aria-label="Language"></button>
   </div>
   <div id="clockbar"><i></i></div>
 </div>
@@ -2182,9 +2186,9 @@ function hudUpdate(force) {
   $('cDay').title = t('goal_line', money(GOAL_LIRA), GOAL_REP, GOAL_DAY);
   const f = S.phase === 'day' ? S.t / DAY_LEN : (S.phase === 'plan' ? 0 : 1); $('clockbar').firstElementChild.style.width = (f * 100).toFixed(1) + '%';
   $('bPause').innerHTML = ic(ui.paused ? 'play' : 'pause'); $('bPause').setAttribute('aria-label', ui.paused ? t('resume') : t('pause')); $('bPause').title = ui.paused ? t('resume') : t('pause') + ' (P)';
-  $('bMusic').innerHTML = ic(settings.musicOn ? 'music' : 'musicOff'); $('bMusic').title = $('bMusic').ariaLabel = t('music');
-  $('bSfx').innerHTML = ic(settings.sfxOn ? 'speaker' : 'speakerOff'); $('bSfx').title = $('bSfx').ariaLabel = t('sfx');
-  $('bLang').textContent = t('langBtn'); $('bLang').title = $('bLang').ariaLabel = t('language');
+  $('bMusic').innerHTML = ic(settings.musicOn ? 'music' : 'musicOff'); $('bMusic').title = t('music'); $('bMusic').setAttribute('aria-label', t('music'));
+  $('bSfx').innerHTML = ic(settings.sfxOn ? 'speaker' : 'speakerOff'); $('bSfx').title = t('sfx'); $('bSfx').setAttribute('aria-label', t('sfx'));
+  $('bLang').textContent = t('langBtn'); $('bLang').title = t('language'); $('bLang').setAttribute('aria-label', t('language'));
   for (const b of $('speedSeg').children) { b.classList.toggle('on', +b.dataset.speed === ui.speed); b.setAttribute('aria-pressed', +b.dataset.speed === ui.speed ? 'true' : 'false'); }
   const dock = $('dock'); const dh = '<button class="btn" data-act="plan" id="dPlan">' + ic('chart') + '<span>' + (S.phase === 'plan' ? t('plan') : t('plan')) + '</span></button><button class="btn' + (ui.salesOpen ? ' on' : '') + '" data-act="sales" id="dSales">' + ic('coin') + '<span>' + t('sales') + '</span></button>' + (S.phase === 'plan' ? '<button class="btn primary" data-act="open" id="dOpen">' + ic('play') + '<span>' + t('open_shop') + '</span></button>' : '');
   setHTML(dock, dh);
@@ -2450,7 +2454,7 @@ function setPaused(p) { ui.paused = p; show$('pause', p); if (p) focusFirst('pau
 function openSettings() { renderSettings(); show$('settings'); focusFirst('settings'); }
 function closeSettings() { show$('settings', false); saveSettings(); if (open$('pause')) focusFirst('pause'); }
 function renderSettings() {
-  const sl = (id, label, v) => '<div class="sliderrow"><label for="' + id + '">' + label + '</label><input type="range" id="' + id + '" min="0" max="100" value="' + Math.round(v * 100) + '"><span>' + Math.round(v * 100) + '</span></div>';
+  const sl = (id, label, v) => '<div class="sliderrow"><label for="' + id + '">' + label + '</label><input type="range" id="' + id + '" min="0" max="100" value="' + Math.round(v * 100) + '" aria-label="' + label + '"><span>' + Math.round(v * 100) + '</span></div>';
   const seg = (name, opts, cur) => '<div class="seg" role="group">' + opts.map(([v, l]) => '<button class="btn' + (cur === v ? ' on' : '') + '" data-set="' + name + '" data-v="' + v + '" aria-pressed="' + (cur === v) + '">' + l + '</button>').join('') + '</div>';
   $('sBody').innerHTML = sl('vMaster', t('vol_master'), settings.master) + sl('vMusic', t('vol_music'), settings.music) + sl('vSfx', t('vol_sfx'), settings.sfx)
     + '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('lang_lbl') + '</span>' + seg('lang', [['tr', 'TR'], ['en', 'EN']], settings.lang) + '</div>'
