@@ -518,10 +518,12 @@ function pipeline(p) {
 }
 function workersAt(kind, id) { return S.workers.filter(w => w.assign && w.assign.k === kind && w.assign.id === id); }
 function eff(w) { return w.speed * (1 + 0.15 * (w.skill - 1)); }
-function effSum(st) { let e = 0; for (const w of workersAt('station', st)) e += eff(w); return e; }
+// Avoid per-tick array allocation from workersAt inside hot station rate calculations
+function effSum(st) { let e = 0; for (let i = 0; i < S.workers.length; i++) { const w = S.workers[i], a = w.assign; if (a && a.k === 'station' && a.id === st) e += eff(w); } return e; }
 function stationRate(st) { return DATA.base[st] * DATA.lvl[S.stn[st].lvl - 1] * (DATA.owner + effSum(st)); }
 function pullRate() { return DATA.base.oven * (DATA.owner + effSum('oven')); }
-function unlockedList() { return PRODUCT_IDS.filter(p => S.unlocked[p]); }
+// Cache unlocked product list to eliminate per-frame allocations across produce/bake/demand loops
+function unlockedList() { return S._unlocked || (S._unlocked = PRODUCT_IDS.filter(p => S.unlocked[p])); }
 function priceF(p) { const x = S.sell[p] / DATA.products[p].ref; return x <= 1 ? 1 + 0.9 * (1 - x) : Math.max(0, 1 - 1.5 * (x - 1)); }
 function avgF() { let a = 0, b = 0; for (const p of unlockedList()) { const t = DATA.products[p].taste; a += t * priceF(p); b += t; } return b ? a / b : 1; }
 function repMult() { return 0.55 + 0.2 * S.rep; }
@@ -579,7 +581,7 @@ function act(kind, id) {
   if (kind === 'recipe') {
     const d = DATA.products[id]; if (S.unlocked[id]) return { ok: false, why: 'max' };
     if (S.day < d.day) return { ok: false, why: 'day' }; if (!can(d.cost)) return { ok: false, why: 'cash' };
-    spend(d.cost); S.unlocked[id] = true; S.target[id] = 20; emit('upgrade', { kind, id }); return { ok: true };
+    spend(d.cost); S.unlocked[id] = true; S._unlocked = null; S.target[id] = 20; emit('upgrade', { kind, id }); return { ok: true };
   }
   if (kind === 'hire') {
     if (S.workers.length >= DATA.maxWorkers) return { ok: false, why: 'max' };
@@ -757,19 +759,26 @@ function sellerStep(w, dt, h) {
     if (s.prog <= 0) { s.prog = 0; for (const p in s.tray) S.racks[p] += s.tray[p]; s.tray = {}; s.st = 'load'; s.tm = 0; }
   }
 }
+// Reusable scratch array to avoid per-tick array allocations in demand() across 6 spots
+const _presentArr = [];
 function demand(dt, h) {
   const d = S.st.day, hi = clamp(Math.floor(h - HOUR0), 0, 16);
   for (const sp of SPOT_IDS) {
     let lam = spotLambda(sp, h);
     if (lam <= 0) continue;
-    const present = sp === 'shop' ? [] : sellersAt(sp).filter(w => w.s && w.s.st === 'sell');
+    _presentArr.length = 0;
+    if (sp !== 'shop') {
+      for (let wi = 0; wi < S.workers.length; wi++) {
+        const w = S.workers[wi], a = w.assign;
+        if (a && a.k === 'spot' && a.id === sp && w.s && w.s.st === 'sell') _presentArr.push(w);
+      }
+    }
+    const f = sp === 'shop' ? 1 : sellerFactor(_presentArr.length);
+    if (sp !== 'shop' && !f) continue;
     d.hr[hi].pot += lam * dt;
-    let n;
-    if (sp === 'shop') n = poisson(lam * dt);
-    else { const f = sellerFactor(present.length); if (!f) continue; n = poisson(lam * f * dt); }
+    const n = sp === 'shop' ? poisson(lam * dt) : poisson(lam * f * dt);
     for (let i = 0; i < n; i++) {
-      let who = null;
-      if (sp !== 'shop') who = present[Math.floor(rnd() * present.length)];
+      let who = sp !== 'shop' ? _presentArr[Math.floor(rnd() * _presentArr.length)] : null;
       const avail = p => sp === 'shop' ? Math.max(0, S.racks[p] - reserved(p)) : (who.s.tray[p] || 0);
       const p = pickBuyer(avail);
       if (!p) { d.missed++; d.hr[hi].missed++; d.bySpot[sp].missed++; continue; }
@@ -829,7 +838,7 @@ function nextDay() {
   emit('newday', {});
 }
 function goEndless() { S.endless = true; S.result = null; S.phase = 'summary'; }
-function loadState(o) { S = o; }
+function loadState(o) { S = o; if (S) S._unlocked = null; }
 /*SIM-END*/
 
 /*BOT-START*/
@@ -1635,21 +1644,43 @@ function resizeRenderer() { if (!renderer) return; renderer.setSize(innerWidth, 
 // ---------- staff agents ----------
 const agents = new Map();
 let drag = null;           // { id, x, z }
+// Avoid per-frame array allocations in staffSlot/idleSlot/syncAgents
 function staffSlot(w) {
   const a = w.assign;
   if (!a || a.k !== 'station') return null;
-  const list = workersAt('station', a.id), idx = list.findIndex(x => x.id === w.id), n = list.length, sp = ST3D[a.id];
+  let idx = -1, n = 0;
+  for (let i = 0; i < S.workers.length; i++) {
+    const x = S.workers[i];
+    if (x.assign && x.assign.k === 'station' && x.assign.id === a.id) {
+      if (x.id === w.id) idx = n;
+      n++;
+    }
+  }
+  const sp = ST3D[a.id];
   if (a.id === 'oven') { const span = S.oven.count > 1 ? 4.2 : 3.0; return { x: sp.work[0], z: (S.oven.count > 1 ? 1.2 : -0.6) + (n > 1 ? (idx / (n - 1) - 0.5) * span : 0), yaw: -Math.PI / 2 }; }
   return { x: sp.work[0] + (idx - (n - 1) / 2) * 1.0, z: sp.work[1], yaw: 0 };
 }
 function idleSlot(w) {
-  const idle = S.workers.filter(x => !x.assign), i = idle.findIndex(x => x.id === w.id);
-  return { x: 0.2 + (i % 4) * 0.9, z: -2.2 + Math.floor(i / 4) * 0.9, yaw: 0.3 };
+  let i = 0;
+  for (let j = 0; j < S.workers.length; j++) {
+    const x = S.workers[j];
+    if (!x.assign) {
+      if (x.id === w.id) return { x: 0.2 + (i % 4) * 0.9, z: -2.2 + Math.floor(i / 4) * 0.9, yaw: 0.3 };
+      i++;
+    }
+  }
+  return { x: 0.2, z: -2.2, yaw: 0.3 };
 }
 function syncAgents() {
-  const ids = new Set(S.workers.map(w => w.id));
-  for (const id of [...agents.keys()]) if (!ids.has(id)) agents.delete(id);
-  for (const w of S.workers) if (!agents.has(w.id)) agents.set(w.id, { x: DOOR[0] - 0.4, z: DOOR[1], yaw: 0, ph: rr() * 6, clothes: CLOTHES[w.id % CLOTHES.length], skin: SKINS[(w.id * 3) % SKINS.length], moving: false, mode: 'idle', call: 0 });
+  if (agents.size !== S.workers.length) {
+    for (const id of agents.keys()) {
+      if (!S.workers.some(w => w.id === id)) agents.delete(id);
+    }
+  }
+  for (let i = 0; i < S.workers.length; i++) {
+    const w = S.workers[i];
+    if (!agents.has(w.id)) agents.set(w.id, { x: DOOR[0] - 0.4, z: DOOR[1], yaw: 0, ph: rr() * 6, clothes: CLOTHES[w.id % CLOTHES.length], skin: SKINS[(w.id * 3) % SKINS.length], moving: false, mode: 'idle', call: 0 });
+  }
 }
 function updateStaff(dt, vdt) {
   syncAgents();
