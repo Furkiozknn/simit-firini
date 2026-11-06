@@ -1,61 +1,58 @@
 <p align="center">
-  <a href="https://furkiozknn.github.io/simit-firini/"><img src="docs/banner.svg" width="100%" alt="Simit Fırını: run a simit bakery on an old Istanbul street and send simit sellers across town. Click to play in your browser."></a>
+  <a href="https://furkiozknn.github.io/simit-firini/">
+    <img src="docs/card.jpg" width="100%" alt="Simit Fırını: run a simit bakery on an old Istanbul street and send simit sellers across town. Click to play in your browser.">
+  </a>
 </p>
 
 <p align="center">
-  <a href="https://furkiozknn.github.io/simit-firini/"><img src="https://img.shields.io/badge/%E2%96%B6_Play_now-in_your_browser-C2410C?style=for-the-badge&labelColor=2A150C" alt="Play now in your browser"></a>
+  <a href="https://furkiozknn.github.io/simit-firini/"><img src="https://img.shields.io/badge/%E2%96%B6_Play_free-in_your_browser-C2410C?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=2A150C" height="40" alt="Play free in your browser"></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Three.js-r170-FFC46B?style=for-the-badge&logo=threedotjs&logoColor=white&labelColor=2A150C" alt="Three.js r170">
   <img src="https://img.shields.io/badge/built_by-Claude_Sonnet_5.5-E0561A?style=for-the-badge&logo=claude&logoColor=white&labelColor=2A150C" alt="Built by Claude Sonnet 5.5">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-8CCB6B?style=for-the-badge&labelColor=2A150C" alt="MIT licence"></a>
   <img src="https://img.shields.io/badge/no_install-desktop_%C2%B7_phone-FFF3DF?style=for-the-badge&labelColor=2A150C" alt="No install, desktop and phone">
 </p>
 
-<p align="center"><b>A 3D simit bakery tycoon on an old Istanbul street: knead, shape, dip in molasses, roll in sesame and bake, then send simit sellers with trays to the pier, the school, the park, the office and the tea houses.</b></p>
-
-<p align="center">
-  <img src="docs/gameplay.gif" width="640" alt="Simit Fırını gameplay after the redesign: the hand-painted bakery street with the glowing oven, workers at the stations and simit sellers walking to their spots">
-</p>
-
-<p align="center"><b>Play online: <a href="https://furkiozknn.github.io/simit-firini/">https://furkiozknn.github.io/simit-firini/</a></b> (desktop and phone, no install)</p>
-
 <!-- portals:start -->
-<p align="center">Also on: <a href="https://furkiozknn.itch.io/simit-firini">itch.io</a></p>
+<p align="center">
+  Also on: <a href="https://furkiozknn.itch.io/simit-firini"><strong>itch.io</strong></a>
+</p>
 <!-- portals:end -->
 
-## Highlights
+<p align="center">
+  <strong>A 3D simit bakery tycoon on an old Istanbul street: knead, shape, dip in molasses, roll in sesame and bake, then send simit sellers with trays to the pier, the school, the park, the office and the tea houses.</strong>
+</p>
 
-- **A full production chain.** Five stations (kneading, shaping, molasses, sesame, oven) staffed by workers who gain
-  skill; an unstaffed station runs at 30 % because the owner fills in, but an unattended oven burns the bread.
-- **Simit sellers on the street.** Simitçi carry trays to street spots, sell by the hour and walk back to refill; demand
-  follows the hour and the weather (rain empties the park and the pier, cold fills the tea houses).
-- **Plan the day, then open the shop.** Set production targets and prices, order ingredients, hire staff, buy upgrades
-  and take contracts before each day.
-- **More than simit.** Poğaça, açma, çatal and pide unlock over time.
-- **Hands on in 3D.** Drag a worker onto a station or a street spot in the scene; click a label to open its panel with
-  sales and demand charts.
-- **Balanced by a bot.** A sensible bot wins in roughly 9 of 12 seeds (between day 16 and 20); a careless one goes
-  bankrupt around day 7.
-- **One file, made in code.** One `index.html` with Three.js r170 from a CDN; geometry, textures, music and sound
-  effects are all generated in code.
+<!-- gameplay gif -->
+
+## Features
+
+- **Full bakery production chain:** Manage 5 distinct stations (kneading, shaping, molasses, sesame, oven) staffed by workers who gain skill; an unstaffed station runs at 30 % capacity with the owner filling in, but an unattended oven burns the bread.
+- **Dynamic street selling:** Dispatch simit sellers (simitçi) carrying trays across 5 key spots (pier, school, park, office, tea houses); hourly sales and foot traffic shift dynamically with the hour and weather (rain empties the park and pier, cold fills the tea houses).
+- **Daily strategy & expanding menu:** Plan morning production, set prices, order supplies, hire staff, buy upgrades, and take contracts to reach 5,000 lira and 4 stars of reputation by day 20, unlocking recipes for poğaça, açma, çatal, and pide.
+- **Hands-on 3D management:** Drag workers between stations or out to street spots directly in the scene; click station labels to inspect real-time sales and demand charts, with speed controls at 1x, 2x, or 4x.
+- **Ultra-lean web performance:** A single `index.html` running Three.js r170 delivering 60 fps at 20 &rarr; 28 draw calls (25.6k &rarr; 51.6k triangles) on Intel UHD 620, verified by an automated bot winning on day 17 with 0 JS errors (winning roughly 9 of 12 seeds between day 16 and 20; careless play bankrupt around day 7).
 
 ## How to play
 
 > [!TIP]
-> **Goal:** 5,000 lira in the till **and** 4 stars of reputation by day 20. Afterwards you can keep playing in endless
-> mode.
+> **Goal:** 5,000 lira in the till **and** 4 stars of reputation by day 20. Afterwards you can keep playing in endless mode.
 
-Each morning, plan the day (production and prices, supply, street, staff, growth), then press **Open the shop**. Staff
-the stations, keep an eye on the oven and send simitçi out to the street spots where the demand is.
+1. **Plan the morning:** Before opening each morning, set production targets and retail prices, order flour and water from the supplier, assign workers to stations, and purchase equipment upgrades.
+2. **Manage the bake:** Press **Open the shop** and staff all 5 stations (kneading, shaping, molasses, sesame, oven). Unstaffed stations drop to 30 % output as the owner covers, but an unattended oven burns the bread.
+3. **Work the street:** Dispatch simitçi with trays to high-demand street spots (pier, school, park, office, tea houses). Adjust to weather and time of day, and restock trays before customer rushes pass.
 
 <details>
-<summary><b>More rules</b></summary>
+<summary><b>Rules and economy</b></summary>
 
-- Production chain: flour and water, knead the dough, shape the rings, dip in molasses, roll in sesame, bake, racks.
-- An unstaffed station runs at 30 % (the owner fills in), but an unattended oven burns the bread.
-- Simitçi carry trays to the pier, the school, the park, the office and the tea houses, sell by the hour and walk back
-  to refill. Demand follows the hour and the weather.
-- Wages, rent and wood are paid at night. Go below zero and you are bankrupt.
-- Recipes unlock over time: poğaça, açma, çatal, pide.
+- **Production chain:** Mix flour and water, knead the dough, shape the rings, dip in molasses, roll in sesame, bake in the wood-fired oven, and stack on the racks.
+- **Station staffing:** An unstaffed station runs at 30 % capacity (the owner fills in), but an unattended oven burns the bread.
+- **Street sellers:** Simitçi carry trays to the pier, the school, the park, the office, and the tea houses, sell by the hour, and walk back to refill. Demand follows the hour and the weather.
+- **Expenses & bankruptcy:** Wages, rent, and wood are paid every night. Drop below zero lira and the bakery goes bankrupt.
+- **Menu unlocks:** New recipes unlock over time: poğaça, açma, çatal, and pide.
+- **Endless mode:** Reach 5,000 lira and 4 stars of reputation by day 20 to win; continue playing afterwards in endless mode.
 
 </details>
 
@@ -63,34 +60,35 @@ the stations, keep an eye on the oven and send simitçi out to the street spots 
 
 | Action | Mouse / touch | Keyboard |
 |---|---|---|
-| Pan | drag | arrows / `WASD` |
-| Zoom | wheel / pinch | `+` / `-` |
-| Open a station or spot panel | click its label | |
-| Move a worker | drag the worker onto a station or street spot | |
-| Speed 1x / 2x / 4x | speed buttons | `1` `2` `3` |
-| Pause / back | pause button | `P` / `Esc` |
+| Pan | Drag | Arrows / `WASD` |
+| Zoom | Wheel / pinch | `+` / `-` |
+| Open a station or spot panel | Click its label | |
+| Move a worker | Drag worker onto station or street spot | |
+| Speed 1x / 2x / 4x | Speed buttons | `1` `2` `3` |
+| Pause / back | Pause button | `P` / `Esc` |
 | Music / effects / language | HUD buttons | `M` / `X` / `L` |
-| Fullscreen | settings | `F` |
+| Fullscreen | Settings | `F` |
 
-Settings are saved in `localStorage` under `arena.simitfirini.settings`; the run under `arena.simitfirini.save`, the
-best result under `arena.simitfirini.best`. The language follows the browser (Turkish or English); small touch screens
-start on the Low tier.
+- **Global hotkeys:** `P` / `Esc` pause, `M` music, `X` effects, `L` language, `F` fullscreen, `1` `2` `3` speed.
+- **Audio control:** HUD buttons toggle background music and sound effects independently.
+- **Touch:** Drag to pan the scene, pinch to zoom, tap station or spot labels to view demand charts, and drag workers onto stations or street spots.
+- **Persistence:** Settings (master / music / effects volume, language, Low / High quality tier) are saved in `localStorage` under `arena.simitfirini.settings`; the active run under `arena.simitfirini.save`, and the best result under `arena.simitfirini.best`. The language follows the browser (Turkish or English); small touch screens start on the Low tier.
 
 <details>
 <summary><b>URL flags for testing</b></summary>
 
 | Flag | Effect |
 |---|---|
-| `?auto` | a bot plays to the end with the same rules as a player (4x speed) |
-| `?debug` | fps, draw calls and JS errors on screen; `window.simitfiriniSim(seconds)` fast-forwards without rendering |
-| `?sim=N` | fast-forward N seconds before the first frame |
+| `?auto` | A bot plays to the end with the same rules as a player (4x speed) |
+| `?debug` | FPS, draw calls, and JS errors on screen; `window.simitfiriniSim(seconds)` fast-forwards without rendering |
+| `?sim=N` | Fast-forward N seconds before the first frame |
 | `?low` | Low quality tier |
-| `?lang=en` / `?lang=tr` | language |
-| `?seed=N` | fixed game seed |
-| `?speed=N` | game speed |
-| `?noassets` | accepted; the game uses no asset files |
+| `?lang=en` / `?lang=tr` | Start language |
+| `?seed=N` | Fixed game seed |
+| `?speed=N` | Game speed |
+| `?noassets` | Accepted for the arena convention; the game uses no asset files anyway |
 
-The live state is on `window.simitfirini`.
+`window.simitfirini` exposes the live state.
 
 </details>
 
@@ -111,63 +109,57 @@ The live state is on `window.simitfirini`.
 
 <p align="center"><img src="docs/phone.png" width="300" alt="Simit Fırını on a phone"><br><sub>On a phone</sub></p>
 
-## Redesign (2026-11)
+## Redesign & Performance
 
-**Art direction:** a hand-painted 2.5D bakery. Palette: crust `#B5651D`, sesame `#E6C27A`, oven glow `#FF7A1A`, flour white `#FAF3E6`, tiled blue `#2C5F8A`. Wood-fired oven glow with flicker, steam and flour dust motes; menus are chalkboards, the day summary is a baker-paper receipt.
+**Art direction:** A hand-painted 2.5D bakery. Palette: crust `#B5651D`, sesame `#E6C27A`, oven glow `#FF7A1A`, flour white `#FAF3E6`, tiled blue `#2C5F8A`. Wood-fired oven glow with flicker, steam and flour dust motes; menus are chalkboards, the day summary is a baker-paper receipt.
+
+**Visual updates (rules, controls, bot, and saves are untouched):**
+- **Scene:** Painted palette with warm lighting, cobblestone street and tiled bakery floor textures, props and dressed buildings, oven flame, steam, and flour FX.
+- **Characters:** Animated bakers and customers with idle bobs walking the street and staffing stations.
+- **UI:** Chalkboard modals with a self-hosted chalk font, title bunting, wooden top bar, receipt-style day summary; phone portrait and landscape layouts with verified touch modals.
+
+**Measured on an Intel UHD 620 (headless Chrome, 1280x720):**
+- Draw calls: 20 &rarr; 28
+- Triangles: 25.6k &rarr; 51.6k
+- Frame rate: 60 fps in gameplay before and after
+- Phone layouts: Portrait and landscape checked in QA
+- `?auto` bot wins on day 17 with 0 JS errors, with and without `?noassets`
 
 ![Before and after](docs/redesign-before-after.png)
 
-- **Visual:** painted palette and warm lighting, cobblestone street and tiled bakery floor textures, props and dressed buildings, characters with idle bobs, oven flame, steam and flour FX.
-- **UI:** chalkboard modals with a self-hosted chalk font, title bunting, wooden top bar, receipt-style summary; phone portrait and landscape layouts and the phone modals checked in QA.
-- **Kept:** all rules, recipes, balance numbers, saves, `?auto` bot, flags and i18n are unchanged.
-- **Measured** (headless Chrome, Intel UHD 620, 1280x720): 60 fps in play before and after; draw calls 20 -> 28; triangles 25.6k -> 51.6k; `?auto` bot wins on day 17 with 0 JS errors, with and without `?noassets`.
-
-## Balance
-
-All recipes, prices, demand curves and upgrade costs are in the `DATA` table inside `index.html`. A sensible bot wins in
-roughly 9 of 12 seeds (between day 16 and 20); a careless one goes bankrupt around day 7.
-
 ## Running locally
 
-Serve the folder over HTTP:
+Serve the folder over HTTP (ES modules do not load from `file://`):
 
-```
+```bash
 python -m http.server 8000
 ```
 
-then open <http://localhost:8000/>.
+Then open <http://localhost:8000/>.
 
-## How it was made
+## Made with Claude Code
 
-Built by **Claude Sonnet 5.5** with Claude Code from one prompt: [prompts/simit-firini.md](prompts/simit-firini.md).
-Everything is generated in code: the cut-away bakery, the street, the workers and customers, the textures, the music and
-the sound effects. No asset files are used; Three.js and the Fredoka and Nunito fonts load from CDNs, see
-[CREDITS.md](CREDITS.md).
+Built by **Claude Sonnet 5.5** with Claude Code from one prompt: [prompts/simit-firini.md](prompts/simit-firini.md). Everything is generated in code: the cut-away bakery, the street, the workers and customers, the textures, the music, and the sound effects. No third-party asset files are used; Three.js is loaded from jsDelivr under its MIT licence, and Patrick Hand font subsets are self-hosted under OFL 1.1, see [CREDITS.md](CREDITS.md).
+
+<details>
+<summary><b>Technical notes</b></summary>
+
+- **Simulation & economy (`DATA` table):** All recipes, prices, demand curves, and upgrade costs are contained in the `DATA` table inside `index.html`. A sensible bot wins in roughly 9 of 12 seeds (between day 16 and 20); a careless one goes bankrupt around day 7.
+- **Rendering:** Three.js r170 with warm directional lighting, soft shadows, painted palettes, cobblestone street, tiled floor, wood-fired oven glow with flicker, steam, and flour dust motes.
+- **Audio (Web Audio API):** Synthesized sound effects including oven crackle, dough slaps, simitçi calls, street chatter, rain, and a cheerful clarinet-and-darbuka music loop.
+- **Typography:** Self-hosted Patrick Hand woff2 font subsets in `assets/fonts/` for chalkboard menus and in-world signs; system font stack for body text.
+
+</details>
+
+### Claude Game Arena
 
 Simit Fırını is part of the **Claude Game Arena** series, where each game is built by a Claude model from one prompt.
-The other games: [Hisar](https://furkiozknn.github.io/kale-savunmasi/) ·
-[Çay Ocağı](https://furkiozknn.github.io/cay-ocagi/) · [Çini Ustası](https://furkiozknn.github.io/cini-ustasi/) ·
-[Martı](https://furkiozknn.github.io/marti/) · [Kervan](https://furkiozknn.github.io/kervan/) ·
-[Dolmuş](https://furkiozknn.github.io/dolmus/) · [Peri Golf](https://furkiozknn.github.io/peri-golf/) ·
-[Mehter](https://furkiozknn.github.io/mehter/) · [Boğaz Vapuru](https://furkiozknn.github.io/bogaz-vapuru/) ·
-[Karagöz](https://furkiozknn.github.io/karagoz/) · [Lale Bahçesi](https://furkiozknn.github.io/lale-bahcesi/)
 
-**Round 5:** [Kapadokya Balonu](https://furkiozknn.github.io/kapadokya-balonu/) ·
-[Ebru](https://furkiozknn.github.io/ebru/) · [Kırkpınar](https://furkiozknn.github.io/kirkpinar/) ·
-[Çarşı Kaçışı](https://furkiozknn.github.io/carsi-kacisi/)
+[Hisar](https://furkiozknn.github.io/kale-savunmasi/) · [Çay Ocağı](https://furkiozknn.github.io/cay-ocagi/) · [Çini Ustası](https://furkiozknn.github.io/cini-ustasi/) · [Martı](https://furkiozknn.github.io/marti/) · [Kervan](https://furkiozknn.github.io/kervan/) · [Dolmuş](https://furkiozknn.github.io/dolmus/) · [Peri Golf](https://furkiozknn.github.io/peri-golf/) · [Mehter](https://furkiozknn.github.io/mehter/) · [Boğaz Vapuru](https://furkiozknn.github.io/bogaz-vapuru/) · [Karagöz](https://furkiozknn.github.io/karagoz/) · [Lale Bahçesi](https://furkiozknn.github.io/lale-bahcesi/)
 
-**Round 6:** [Topkapı Gecesi](https://furkiozknn.github.io/topkapi-gecesi/) ·
-[Hamsi](https://furkiozknn.github.io/hamsi/) · [Pamukkale](https://furkiozknn.github.io/pamukkale/) ·
-[Mimar Sinan](https://furkiozknn.github.io/mimar-sinan/)
+**Round 5:** [Kapadokya Balonu](https://furkiozknn.github.io/kapadokya-balonu/) · [Ebru](https://furkiozknn.github.io/ebru/) · [Kırkpınar](https://furkiozknn.github.io/kirkpinar/) · [Çarşı Kaçışı](https://furkiozknn.github.io/carsi-kacisi/)
 
-## Türkçe
-
-**Simit Fırını**, eski bir İstanbul sokağında geçen 3D simit fırını işletme oyunu. Hamuru yoğur, şekil ver, pekmeze
-batır, susama bula ve fırınla; simitçileri tablayla iskeleye, okula, parka, ofise ve çay ocaklarına gönder. Hedef 20.
-güne kadar kasada 5.000 lira ve 4 yıldız itibar; sonra sonsuz mod. Kurulum yok; masaüstünde ve telefonda tarayıcıda
-oynanır. Claude Sonnet 5.5 tarafından Claude Code ile tek bir prompt'tan yapıldı.
-
-**Oyna:** https://furkiozknn.github.io/simit-firini/
+**Round 6:** [Topkapı Gecesi](https://furkiozknn.github.io/topkapi-gecesi/) · [Hamsi](https://furkiozknn.github.io/hamsi/) · [Pamukkale](https://furkiozknn.github.io/pamukkale/) · [Mimar Sinan](https://furkiozknn.github.io/mimar-sinan/)
 
 ## License
 
