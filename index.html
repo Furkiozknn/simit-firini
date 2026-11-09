@@ -426,6 +426,15 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
 }
 .lbl .pip.warn { background: #FFD27A; box-shadow: 0 0 6px #FFD27A; }
 .lbl .pip.bad { background: #FF6B4A; box-shadow: 0 0 8px #FF6B4A; }
+/* altın pişme: the oven label and the peel button glow while bread is in its golden moment */
+.lbl.gold {
+  background: linear-gradient(180deg, #8A5A10 0%, #4A2E06 100%);
+  border-color: #FFE08A;
+  box-shadow: 0 0 18px rgba(255, 208, 64, 0.85), 0 4px 12px rgba(10, 4, 1, 0.65);
+  animation: goldPulse .8s ease-in-out infinite alternate;
+}
+.lbl.gold .lbl-badge { background: #FFD040; color: #2A150C; border-color: #FFF2C2; }
+@keyframes goldPulse { from { filter: brightness(1); } to { filter: brightness(1.3); } }
 @media (pointer: coarse) { .lbl { min-height: 44px; padding: 6px 14px; } }
 
 /* =============================================================================================
@@ -439,6 +448,12 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 #dock .btn { min-height: 46px; min-width: 110px; font-size: 15px; border-radius: 9px; }
+#dPeel.hot, .btn.goldy {
+  background: linear-gradient(180deg, #FFE27A 0%, #E0A82A 100%); color: #2A150C; border-color: #FFF2C2;
+  box-shadow: 0 0 22px rgba(255, 208, 64, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+#dPeel.hot { animation: goldPulse .8s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .lbl.gold, #dPeel.hot { animation: none; } }
 #dOpen {
   animation: pulseGlow 2.5s infinite;
 }
@@ -685,6 +700,7 @@ const store = {
 };
 const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best' };
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+const RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
 const settings = Object.assign({ master: 0.8, music: 0.6, sfx: 0.8, lang: /^tr/i.test(navigator.language || '') ? 'tr' : 'en', quality: (coarse && Math.min(innerWidth, innerHeight) < 820) ? 'low' : 'high', musicOn: true, sfxOn: true }, store.get(KEY.settings) || {});
 if (FLAGS.lang === 'en' || FLAGS.lang === 'tr') settings.lang = FLAGS.lang;
 const saveSettings = () => store.set(KEY.settings, settings);
@@ -805,6 +821,11 @@ const DATA = {
   stationCost: [110, 240, 480], ovenCost: [180, 380, 700], oven2Cost: 520, bikeCost: 200, shopCost: [380, 900],
   rackCap: [60, 110, 170], shopMult: [1, 1.35, 1.7], trayCap: 24, bikeCap: 12, bikeWalk: 0.55,
   hireCost: 50, maxWorkers: 8,
+  // Mayalanma Penceresi: shaped dough rests on the proofing board before the oven. The ideal window (sim seconds)
+  // is base * weather factor * win; the rest timer is base * lvl. Quality multiplies the sale price (dense, ideal, collapsed).
+  proof: { base: { simit: 8, pogaca: 9, acma: 10, catal: 8, pide: 12 }, lvl: [0.75, 1, 1.35], wx: { sunny: 0.9, cloudy: 1, rain: 1.05, cold: 1.4 }, win: [0.8, 1.3], mult: [0.85, 1, 0.7], q: 30 },
+  // altın pişme: pulled by hand from `pre` s before done to `post` s after done; one peel per oven every `cd` s
+  gold: { pre: 0.4, post: 1.4, mult: 1.25, cd: 2 },
   ing: {
     flour: { p: 1.1, vol: 0.12 }, water: { p: 0.1, vol: 0.0 }, molasses: { p: 0.6, vol: 0.12 },
     sesame: { p: 0.8, vol: 0.14 }, butter: { p: 2.2, vol: 0.14 }, cheese: { p: 2.6, vol: 0.14 },
@@ -868,8 +889,9 @@ function newGame(seed) {
     upg: { bike: false, shop: 1 },
     contracts: { offers: [], active: [] }, nextContract: 1,
     st: { day: null, hist: [] }, last: null, endless: false, result: null, won: false,
+    proof: { lvl: 1, age: {} }, rq: {},
   };
-  for (const p of PRODUCT_IDS) { S.buf[p] = [0, 0, 0, 0, 0, 0]; S.racks[p] = 0; S.sell[p] = DATA.products[p].ref; if (p !== 'simit') { S.unlocked[p] = false; S.target[p] = 0; } }
+  for (const p of PRODUCT_IDS) { S.buf[p] = [0, 0, 0, 0, 0, 0]; S.racks[p] = 0; S.rq[p] = 1; S.proof.age[p] = []; S.sell[p] = DATA.products[p].ref; if (p !== 'simit') { S.unlocked[p] = false; S.target[p] = 0; } }
   for (const k of ING_IDS) { S.price[k] = DATA.ing[k].p; S.trend[k] = 0; S.dev[k] = 0; }
   S.workers.push(newWorker(0), newWorker(1));
   S.workers[0].assign = { k: 'station', id: 'oven' }; S.workers[1].assign = { k: 'station', id: 'knead' };
@@ -937,10 +959,40 @@ function trayCap() { return DATA.trayCap + (S.upg.bike ? DATA.bikeCap : 0); }
 function walkTime(spot) { return DATA.spots[spot].walk * (S.upg.bike ? DATA.bikeWalk : 1); }
 function trayCount(w) { let n = 0; if (w.s) for (const p in w.s.tray) n += w.s.tray[p]; return n; }
 
+// ---------- Mayalanma Penceresi (proofing window) + altın pişme (golden bake) ----------
+function proofBase(p) { return DATA.proof.base[p] || 8; }
+function proofRest(p) { return proofBase(p) * DATA.proof.lvl[S.proof.lvl]; }
+function proofWin(p) { const c = proofBase(p) * (DATA.proof.wx[S.weather] || 1); return [c * DATA.proof.win[0], c * DATA.proof.win[1]]; }
+function proofClass(p, age) { const w = proofWin(p); return age < w[0] ? 0 : age > w[1] ? 2 : 1; } // 0 dense, 1 ideal, 2 collapsed
+function qMult(cls, gold) { return DATA.proof.mult[cls === undefined ? 1 : cls] * (gold ? DATA.gold.mult : 1); }
+// racks and trays keep one average quality multiplier per product; adding pieces blends it
+function rackQ(p) { return S.rq[p] === undefined ? 1 : S.rq[p]; }
+function addRack(p, n, m) { const r = S.racks[p]; if (n > 0) S.rq[p] = (rackQ(p) * r + m * n) / (r + n); S.racks[p] = r + n; }
+function trayQ(s, p) { return s.tq && s.tq[p] !== undefined ? s.tq[p] : 1; }
+function proofTick(dt) {
+  // one age per piece on the proofing board (the last buffer before the oven), oldest first
+  for (const p of unlockedList()) {
+    const idx = DATA.products[p].steps.length - 1, n = S.buf[p][idx], a = S.proof.age[p] || (S.proof.age[p] = []);
+    while (a.length < n) a.push(0);
+    if (a.length > n) a.splice(0, a.length - n);
+    for (let i = 0; i < a.length; i++) a[i] += dt;
+  }
+}
+function boardTotal() { let n = 0; for (const p of unlockedList()) n += S.buf[p][DATA.products[p].steps.length - 1]; return n; }
+function boardRoom(p) {
+  // bakers stop sending dough to the board once it holds what the oven slots can take before the window closes;
+  // slow pulling keeps slots busy longer than this, and then the dough over-proofs
+  const intake = S.oven.count * slotsPerOven() / bakeTime(p), w = proofWin(p);
+  return clamp(Math.floor(intake * Math.max(proofRest(p), (w[0] + w[1]) / 2)) + 1, 3, DATA.proof.q);
+}
+function goldBand(sl) { return !!sl.p && (sl.done ? sl.wait <= DATA.gold.post : sl.bt - sl.t <= DATA.gold.pre); }
+function ovenGold(ov) { for (const sl of ov.slots) if (goldBand(sl)) return true; return false; }
+function goldCount(ov) { let n = 0; for (const sl of ov.slots) if (goldBand(sl)) n++; return n; }
+
 // ---------- day stats ----------
 function beginDayStats() {
   const hr = []; for (let i = 0; i < 17; i++) hr.push({ sold: 0, missed: 0, rev: 0, shop: 0, pot: 0 });
-  S.st.day = { rev: 0, sold: 0, served: 0, missed: 0, burnt: 0, invest: 0, fines: 0, wasted: 0, fuel: 0, bought: 0, baked: 0, hr, bySpot: {}, byProd: {}, lira0: S.lira, done: 0, fail: 0, contractRev: 0 };
+  S.st.day = { rev: 0, sold: 0, served: 0, missed: 0, burnt: 0, invest: 0, fines: 0, wasted: 0, fuel: 0, bought: 0, baked: 0, hr, bySpot: {}, byProd: {}, lira0: S.lira, done: 0, fail: 0, contractRev: 0, pq: [0, 0, 0], gold: 0, goldMiss: 0 };
   for (const s of SPOT_IDS) S.st.day.bySpot[s] = { sold: 0, rev: 0, missed: 0 };
   for (const p of PRODUCT_IDS) S.st.day.byProd[p] = 0;
 }
@@ -981,7 +1033,33 @@ function act(kind, id) {
   }
   return { ok: false, why: 'kind' };
 }
-function dropTray(w) { if (w.s) { for (const p in w.s.tray) S.racks[p] += w.s.tray[p]; w.s = null; } }
+function dropTray(w) { if (w.s) { for (const p in w.s.tray) addRack(p, w.s.tray[p], trayQ(w.s, p)); w.s = null; } }
+function setProof(lvl) {
+  if (S.phase === 'summary' || S.phase === 'ended') return { ok: false, why: 'phase' };
+  lvl = Math.round(lvl); if (!(lvl >= 0 && lvl < DATA.proof.lvl.length)) return { ok: false, why: 'kind' };
+  S.proof.lvl = lvl; return { ok: true };
+}
+function peel(oi) {
+  // the baker pulls by hand every piece of one oven that is in its golden moment
+  if (S.phase !== 'day') return { ok: false, why: 'phase' };
+  const ov = S.oven.ovens[oi]; if (!ov || oi >= S.oven.count) return { ok: false, why: 'gone' };
+  if (ov.cd > 0) return { ok: false, why: 'peelcd' };
+  ov.cd = DATA.gold.cd; let n = 0;
+  for (const sl of ov.slots) {
+    if (!goldBand(sl)) continue;
+    if (rackTotal() >= rackCap()) { if (n) break; return { ok: false, why: 'rackfull' }; }
+    addRack(sl.p, 1, qMult(sl.q, true)); S.st.day.baked++; S.st.day.gold++; sl.p = null; sl.done = false; sl.wait = 0; n++;
+  }
+  if (!n) { S.st.day.goldMiss++; return { ok: false, why: 'peelmiss' }; }
+  emit('gold', { n, oi }); return { ok: true, n };
+}
+function peelAll() {
+  // G key / dock button: every oven with bread in its golden moment; with none, it is a miss on every oven
+  let n = 0, any = false, why = 'peelmiss';
+  for (let i = 0; i < S.oven.count; i++) if (S.oven.ovens[i] && ovenGold(S.oven.ovens[i])) { any = true; const r = peel(i); if (r.ok) n += r.n; else why = r.why; }
+  if (!any) for (let i = 0; i < S.oven.count; i++) { const r = peel(i); if (r.why === 'peelcd') why = 'peelcd'; }
+  return n ? { ok: true, n } : { ok: false, why };
+}
 function assign(wid, kind, id) {
   const w = S.workers.find(x => x.id === wid); if (!w) return { ok: false, why: 'gone' };
   if (kind === 'none') { dropTray(w); w.assign = null; emit('assign', { id: wid }); return { ok: true }; }
@@ -1038,6 +1116,8 @@ function checkContracts() {
 function startDay() {
   if (S.phase !== 'plan') return;
   S.phase = 'day'; S.t = 0;
+  // dough left on the proofing board overnight was kept cold: it starts its rest again this morning
+  for (const p in S.proof.age) S.proof.age[p] = S.proof.age[p].map(() => 0);
   for (const w of S.workers) if (w.assign && w.assign.k === 'spot' && !w.s) w.s = { st: 'load', tm: 0, prog: 0, tray: {} };
   emit('daystart', {});
 }
@@ -1052,8 +1132,8 @@ function pickStation(st) {
       let score;
       if (i === 0) { score = S.target[p] + reserved(p) - S.racks[p] - pipeline(p); if (score <= 0) continue; }
       else { score = S.buf[p][i]; if (score < 1) continue; }
-      const nextIsBake = steps[i + 1] === 'bake', room = (nextIsBake ? DATA.ovenQ : DATA.bufMax);
-      if (S.buf[p][i + 1] >= room) { if (flag !== 'noing') flag = 'blocked'; continue; }
+      const nextIsBake = steps[i + 1] === 'bake';
+      if (nextIsBake ? boardTotal() >= boardRoom(p) : S.buf[p][i + 1] >= DATA.bufMax) { if (flag !== 'noing') flag = 'blocked'; continue; }
       const m = haveIng(d.ing[i]); if (m) { flag = 'noing'; miss = m; continue; }
       if (score > bestScore) { bestScore = score; best = { p, i }; }
     }
@@ -1079,16 +1159,19 @@ function produce(dt) {
 }
 function bakeTime(p) { return DATA.products[p].bake * (1 - 0.08 * (S.oven.lvl - 1)); }
 function nextToBake() {
-  let best = null, bs = 0;
-  for (const p of unlockedList()) { const idx = DATA.products[p].steps.length - 1; if (S.buf[p][idx] > bs) { bs = S.buf[p][idx]; best = p; } }
+  // the piece that has rested longest past its rest timer goes in first; pieces still resting wait on the board
+  let best = null, bs = -1;
+  for (const p of unlockedList()) { const a = S.proof.age[p]; if (!a || !a.length) continue; const over = a[0] - proofRest(p); if (over >= 0 && over > bs) { bs = over; best = p; } }
   return best;
 }
 function bake(dt) {
   const o = S.oven; o.act = Math.max(0, o.act - dt);
+  proofTick(dt);
+  for (const ov of o.ovens) if (ov.cd > 0) ov.cd = Math.max(0, ov.cd - dt);
   for (const ov of o.ovens) for (const sl of ov.slots) {
     if (!sl.p) {
       const p = nextToBake();
-      if (p) { const idx = DATA.products[p].steps.length - 1; S.buf[p][idx]--; sl.p = p; sl.t = 0; sl.bt = bakeTime(p); sl.done = false; sl.wait = 0; S.st.day.fuel += DATA.fuel; }
+      if (p) { const idx = DATA.products[p].steps.length - 1; S.buf[p][idx]--; const q = proofClass(p, S.proof.age[p].shift()); S.st.day.pq[q]++; sl.p = p; sl.q = q; sl.t = 0; sl.bt = bakeTime(p); sl.done = false; sl.wait = 0; S.st.day.fuel += DATA.fuel; }
     } else if (!sl.done) { sl.t += dt; if (sl.t >= sl.bt) { sl.done = true; sl.wait = 0; } }
     else { sl.wait += dt; if (sl.wait > DATA.grace) { S.st.day.burnt++; emit('burnt', { p: sl.p }); sl.p = null; sl.done = false; } }
   }
@@ -1099,7 +1182,7 @@ function bake(dt) {
     for (const ov of o.ovens) for (const sl of ov.slots) if (sl.p && sl.done && sl.wait > bw) { bw = sl.wait; best = sl; }
     if (!best) { o.pull = Math.min(o.pull, 1); o.flag = 'ok'; break; }
     if (rackTotal() >= rackCap()) { o.pull = Math.min(o.pull, 1); o.flag = 'full'; break; }
-    S.racks[best.p]++; S.st.day.baked++; best.p = null; best.done = false; o.pull -= 1; o.flag = 'ok'; o.act = 0.8;
+    addRack(best.p, 1, qMult(best.q, false)); S.st.day.baked++; best.p = null; best.done = false; o.pull -= 1; o.flag = 'ok'; o.act = 0.8;
     const ws = workersAt('station', 'oven'); for (const w of ws) { w.xp += 1 / ws.length; if (w.xp > [150, 400, 800, 1400][w.skill - 1]) { w.skill++; emit('skill', { id: w.id }); } }
     emit('bake', {});
   }
@@ -1132,7 +1215,7 @@ function sellerStep(w, dt, h) {
       for (const p of ps) {
         const share = Math.max(1, Math.round(cap * DATA.products[p].taste * priceF(p) / wsum));
         const free = Math.max(0, S.racks[p] - reserved(p)), n = Math.min(room, share, free);
-        if (n > 0) { S.racks[p] -= n; s.tray[p] = (s.tray[p] || 0) + n; room -= n; took += n; }
+        if (n > 0) { const had = s.tray[p] || 0; s.tq = s.tq || {}; s.tq[p] = (trayQ(s, p) * had + rackQ(p) * n) / (had + n); S.racks[p] -= n; s.tray[p] = had + n; room -= n; took += n; }
       }
       if (took > 0) { s.st = 'go'; s.tm = 0; } else s.tm = 1;
     }
@@ -1142,7 +1225,7 @@ function sellerStep(w, dt, h) {
     if (closing || left < Math.max(2, cap * 0.12)) { s.st = 'back'; }
   } else if (s.st === 'back') {
     s.prog -= dt / wt;
-    if (s.prog <= 0) { s.prog = 0; for (const p in s.tray) S.racks[p] += s.tray[p]; s.tray = {}; s.st = 'load'; s.tm = 0; }
+    if (s.prog <= 0) { s.prog = 0; for (const p in s.tray) addRack(p, s.tray[p], trayQ(s, p)); s.tray = {}; s.tq = {}; s.st = 'load'; s.tm = 0; }
   }
 }
 // Reusable scratch array to avoid per-tick array allocations in demand() across 6 spots
@@ -1170,7 +1253,7 @@ function demand(dt, h) {
       if (!p) { d.missed++; d.hr[hi].missed++; d.bySpot[sp].missed++; continue; }
       const qs = DATA.products[p].q; let q = Math.min(qs[Math.floor(rnd() * qs.length)], avail(p));
       if (sp === 'shop') S.racks[p] -= q; else who.s.tray[p] -= q;
-      recSale(sp, p, q, S.sell[p], h); emit('sale', { spot: sp, p, q, who: who ? who.id : 0 });
+      recSale(sp, p, q, S.sell[p] * (sp === 'shop' ? rackQ(p) : trayQ(who.s, p)), h); emit('sale', { spot: sp, p, q, who: who ? who.id : 0 });
     }
   }
 }
@@ -1188,7 +1271,7 @@ function rentToday() { return DATA.rentBase + DATA.rentShop * (S.upg.shop - 1); 
 function endDay() {
   const d = S.st.day;
   for (const w of S.workers) dropTray(w);
-  for (const ov of S.oven.ovens) for (const sl of ov.slots) if (sl.p) { if (sl.done || sl.t > sl.bt * 0.5) { if (rackTotal() < rackCap()) S.racks[sl.p]++; else d.wasted++; } sl.p = null; sl.done = false; }
+  for (const ov of S.oven.ovens) for (const sl of ov.slots) if (sl.p) { if (sl.done || sl.t > sl.bt * 0.5) { if (rackTotal() < rackCap()) addRack(sl.p, 1, qMult(sl.q, false)); else d.wasted++; } sl.p = null; sl.done = false; }
   for (const c of S.contracts.active) if (!c.done) { c.done = true; d.fail++; emit('contractfail', { c, pay: 0, fine: 0 }); }
   S.contracts.active = [];
   for (const p of PRODUCT_IDS) { const keep = Math.floor(S.racks[p] * 0.35); d.wasted += S.racks[p] - keep; S.racks[p] = keep; }
@@ -1197,11 +1280,14 @@ function endDay() {
   const tot = d.served + d.missed, sat = tot > 0 ? d.served / tot : 0.7;
   let avgp = 0, wsum = 0; for (const p of unlockedList()) { avgp += S.sell[p] / DATA.products[p].ref * DATA.products[p].taste; wsum += DATA.products[p].taste; } avgp /= wsum;
   let dr = (sat - 0.66) * 1.0 - d.burnt * 0.012 - d.fail * 0.14 + d.done * 0.1 - (avgp > 1.25 ? 0.1 : 0) + (avgp < 0.92 ? 0.04 : 0);
+  // proofing quality: dense or collapsed bread costs reputation, golden pulls earn a little
+  const pqT = d.pq[0] + d.pq[1] + d.pq[2];
+  if (pqT >= 10) dr += -0.06 * d.pq[0] / pqT - 0.12 * d.pq[2] / pqT + 0.06 * Math.min(1, d.gold / pqT);
   if (tot < 15) dr = Math.min(dr, 0) - 0.08;
   dr = clamp(dr, -0.4, 0.35); S.rep = clamp(S.rep + dr, 0, 5);
   const expect = d.rev + d.contractRev - d.bought - d.invest - d.fines - wages - rent - fuel, actual = S.lira - d.lira0;
   if (Math.abs(expect - actual) > 0.05 && typeof window !== 'undefined') window.__errors.push('summary mismatch: lines ' + expect.toFixed(2) + ' vs till change ' + actual.toFixed(2));
-  S.last = { invest: d.invest, fines: d.fines, rev: d.rev, day: S.day, served: d.served, sat, contractRev: d.contractRev, sold: d.sold, missed: d.missed, burnt: d.burnt, wasted: d.wasted, bought: d.bought, wages, rent, fuel, lira: S.lira, net: S.lira - d.lira0, dRep: dr, rep: S.rep, weather: S.weather, hr: d.hr, bySpot: d.bySpot, done: d.done, fail: d.fail };
+  S.last = { invest: d.invest, fines: d.fines, rev: d.rev, day: S.day, served: d.served, sat, contractRev: d.contractRev, sold: d.sold, missed: d.missed, burnt: d.burnt, wasted: d.wasted, bought: d.bought, wages, rent, fuel, lira: S.lira, net: S.lira - d.lira0, dRep: dr, rep: S.rep, weather: S.weather, hr: d.hr, bySpot: d.bySpot, done: d.done, fail: d.fail, pq: d.pq.slice(), gold: d.gold };
   S.st.hist.push({ day: S.day, lira: Math.round(S.lira), rep: +S.rep.toFixed(2), net: Math.round(S.lira - d.lira0), sold: d.sold });
   // supplier prices for tomorrow
   for (const k of ING_IDS) {
@@ -1224,7 +1310,16 @@ function nextDay() {
   emit('newday', {});
 }
 function goEndless() { S.endless = true; S.result = null; S.phase = 'summary'; }
-function loadState(o) { S = o; if (S) S._unlocked = null; }
+function loadState(o) { S = o; if (S) { S._unlocked = null; migrateState(); } }
+function migrateState() {
+  // saves made before the proofing window: add its fields with neutral values (ideal quality, normal rest)
+  if (!S.proof || typeof S.proof !== 'object') S.proof = { lvl: 1, age: {} };
+  if (!(S.proof.lvl >= 0 && S.proof.lvl < DATA.proof.lvl.length)) S.proof.lvl = 1;
+  if (!S.proof.age) S.proof.age = {};
+  if (!S.rq) S.rq = {};
+  for (const p of PRODUCT_IDS) { if (!Array.isArray(S.proof.age[p])) S.proof.age[p] = []; if (typeof S.rq[p] !== 'number') S.rq[p] = 1; }
+  const d = S.st && S.st.day; if (d) { if (!Array.isArray(d.pq)) d.pq = [0, 0, 0]; if (typeof d.gold !== 'number') d.gold = 0; if (typeof d.goldMiss !== 'number') d.goldMiss = 0; }
+}
 /*SIM-END*/
 
 /*BOT-START*/
@@ -1326,10 +1421,34 @@ function botPlan(style) {
   botUpgrades();
   const ps = unlockedList(), tsum = ps.reduce((a, p) => a + DATA.products[p].taste, 0), cap = rackCap();
   for (const p of ps) setTarget(p, cap * 0.7 * DATA.products[p].taste / tsum);
+  botProof();
   botAssignAll(S.workers.length <= 3 ? 0.34 : 0.4);
+  if (L && L.pq) {
+    // yesterday's dough collapsed waiting for a free slot: the pulls were too slow, so move the fastest station's baker to the oven
+    const pqT = L.pq[0] + L.pq[1] + L.pq[2];
+    if (pqT >= 30 && L.pq[2] / pqT > 0.12 && workersAt('station', 'oven').length < 2) {
+      const st = STATION_IDS.filter(s => workersAt('station', s).length > 1).sort((a, b) => stationRate(b) - stationRate(a))[0];
+      if (st) { const w = workersAt('station', st).sort((a, b) => eff(a) - eff(b))[0]; w.assign = { k: 'station', id: 'oven' }; }
+    }
+  }
   for (const c of S.contracts.offers.slice()) if (S.contracts.active.length < 2 && c.qty <= botCapacity() * 70 && S.unlocked[c.p]) acceptContract(c.id);
   botOrders(0.9);
   startDay();
+}
+function botProof() {
+  // rest timer: the level that sits inside today's window with the most room left for waiting on a free oven slot
+  const c = DATA.proof.wx[S.weather] || 1, lo = c * DATA.proof.win[0], hi = c * DATA.proof.win[1];
+  let best = 1, room = -1e9;
+  DATA.proof.lvl.forEach((r, l) => { const v = r >= lo ? hi - r : r - lo - 10; if (v > room) { room = v; best = l; } });
+  setProof(best);
+}
+function botGold() {
+  // golden bake: peel an oven once two pieces glow together, or as soon as one is about to leave its golden moment
+  for (let i = 0; i < S.oven.count; i++) {
+    const ov = S.oven.ovens[i]; if (!ov || ov.cd > 0) continue;
+    let n = 0, late = false; for (const sl of ov.slots) if (goldBand(sl)) { n++; if (sl.done && sl.wait > DATA.gold.post - 0.35) late = true; }
+    if (n >= 2 || (n && late)) peel(i);
+  }
 }
 function botHour() {
   // light mid-day upkeep: restock a missing ingredient when the van can still make it
@@ -2180,9 +2299,10 @@ function updateRings() {
     for (const p of PRODUCT_IDS) { if (!S.unlocked[p]) continue; const steps = DATA.products[p].steps; for (let i = 1; i < steps.length; i++) if (steps[i] === st) for (let k = 0; k < Math.min(S.buf[p][i], 10); k++) items.push(stageCol(p, i)); }
     for (let k = 0; k < Math.min(items.length, 12); k++) ringPut(p0[0] - 1.0 + (k % 6) * 0.4, FLOOR_Y + (st === 'dip' || st === 'sesame' ? 1.23 : 1.0) + 0.08, p0[1] - 0.25 + Math.floor(k / 6) * 0.5, items[k], 1, k * 0.7);
   }
-  // pieces waiting for the oven (peel rack)
-  { const items = []; for (const p of PRODUCT_IDS) { if (!S.unlocked[p]) continue; const idx = DATA.products[p].steps.length - 1; for (let k = 0; k < Math.min(S.buf[p][idx], 8); k++) items.push(stageCol(p, idx)); }
-    for (let k = 0; k < items.length; k++) ringPut(-5.7 + (k % 4) * 0.34, FLOOR_Y + 1.06 + Math.floor(k / 4) * 0.12, -2.4 + (k % 2) * 0.2, items[k], 0.9, k); }
+  // pieces waiting for the oven (proofing board): they swell while resting and go pale and flat when over-proofed
+  { const items = []; for (const p of PRODUCT_IDS) { if (!S.unlocked[p]) continue; const idx = DATA.products[p].steps.length - 1, a = S.proof.age[p] || [], w = proofWin(p);
+      for (let k = 0; k < Math.min(S.buf[p][idx], 8); k++) { const age = a[k] || 0; items.push(age > w[1] ? [0xA89A80, 1.0] : [stageCol(p, idx), 0.72 + 0.2 * clamp(age / w[0], 0, 1)]); } }
+    for (let k = 0; k < items.length; k++) ringPut(-5.7 + (k % 4) * 0.34, FLOOR_Y + 1.06 + Math.floor(k / 4) * 0.12, -2.4 + (k % 2) * 0.2, items[k][0], 0.9 * items[k][1], k); }
   // oven slots
   S.oven.ovens.forEach((ov, oi) => {
     const z0 = oi === 0 ? -0.6 : 3.0;
@@ -2191,7 +2311,8 @@ function updateRings() {
       const f = clamp(sl.t / sl.bt, 0, 1);
       _ca.set(0xE6D0A0).lerp(_cb.set(0xC97F2A), f);
       if (sl.done) { _ca.set(0xD98A2B); if (sl.wait > 2.5) _ca.lerp(_cb.set(0x24150C), clamp((sl.wait - 2.5) / (DATA.grace - 2.5), 0, 1)); }
-      ringPut(-7.55 - Math.floor(j / 3) * 0.5, FLOOR_Y + 1.3, z0 + ((j % 3) - 1) * 0.62, _ca.getHex(), 1.05, j * 0.5);
+      const gold = goldBand(sl); if (gold) _ca.set(0xFFCF3A);   // altın an: bright gold and a little bigger
+      ringPut(-7.55 - Math.floor(j / 3) * 0.5, FLOOR_Y + 1.3, z0 + ((j % 3) - 1) * 0.62, _ca.getHex(), gold ? 1.22 : 1.05, j * 0.5);
     });
   });
   // racks
@@ -2219,6 +2340,16 @@ function initLabels() {
     b.addEventListener('click', e => { e.stopPropagation(); UI.select(d.kind, d.id); });
     host.appendChild(b); labels.push({ el: b, d, v: new THREE.Vector3(...d.pos), last: '' });
   }
+  ovenLabel = labels.find(l => l.d.kind === 'station' && l.d.id === 'oven');
+}
+let ovenLabel = null, goldOn = false, goldChimeAt = 0;
+function goldCue() {
+  // every frame: light the oven label and the peel button while bread is golden, and ring the bell when it starts
+  const on = ui.inGame && S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o));
+  if (on && !goldOn && !ui.quiet && !ui.paused) { const now = performance.now(); if (now - goldChimeAt > 900) { goldChimeAt = now; SFX.goldCue(); } }
+  goldOn = on;
+  const d = $('dPeel'); if (d) d.classList.toggle('hot', on);
+  if (ovenLabel) ovenLabel.el.classList.toggle('gold', on);
 }
 const SPOT_ICON = { shop: 'shop', pier: 'ferry', school: 'school', park: 'park', office: 'office', tea: 'tea' };
 function labelText(l) {
@@ -2228,6 +2359,7 @@ function labelText(l) {
     icon = id === 'oven' ? 'oven' : 'dough'; txt = t('st_' + id);
     sub = n > 0 ? n : '0';
     if (id === 'oven') pip = sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn'));
+    if (id === 'oven' && S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o))) sub = t('gold_now');
     else pip = sn.flag === 'noing' ? 'bad' : (sn.flag === 'ok' ? (n ? 'good' : 'warn') : 'warn');
   } else if (kind === 'rack') {
     icon = 'rack'; txt = t('racks');
@@ -2283,7 +2415,13 @@ function updateScenery(vdt) {
   let heat = 0; for (const ov of S.oven.ovens) for (const sl of ov.slots) if (sl.p) heat += 1;
   const hot = clamp(heat / 6, 0, 1);
   const flick = 0.82 + 0.1 * Math.sin(simTime * 9) + 0.06 * Math.sin(simTime * 23.7 + 1.3) + 0.04 * Math.sin(simTime * 41.1);
-  world.ovenGlow.forEach((g, i) => { g.visible = i < S.oven.count; g.material.opacity = (0.4 + 0.5 * hot) * (flick + 0.08 * Math.sin(simTime * 9 + i * 2)) + 0.1; const k = 1 + 0.06 * Math.sin(simTime * 7 + i); g.scale.set(k, k * (1 + 0.05 * Math.sin(simTime * 13)), 1); });
+  world.ovenGlow.forEach((g, i) => {
+    g.visible = i < S.oven.count; g.material.opacity = (0.4 + 0.5 * hot) * (flick + 0.08 * Math.sin(simTime * 9 + i * 2)) + 0.1; const k = 1 + 0.06 * Math.sin(simTime * 7 + i); g.scale.set(k, k * (1 + 0.05 * Math.sin(simTime * 13)), 1);
+    // altın an: the mouth of the oven turns gold (steady with reduced motion)
+    const gold = S.phase === 'day' && i < S.oven.count && S.oven.ovens[i] && ovenGold(S.oven.ovens[i]);
+    g.material.color.setHex(gold ? 0xFFD040 : 0xFF7A1A);
+    if (gold) { g.material.opacity = RM ? 1 : 0.85 + 0.15 * Math.sin(simTime * 10); if (RM) g.scale.set(1.15, 1.15, 1); }
+  });
   if (world.ovenLight) { world.ovenLight.intensity = (4 + 26 * hot) * flick * (1 - tod.night * 0.0); world.ovenLight.position.z = S.oven.count > 1 ? 1.2 : -0.6; world.ovenLight.distance = S.oven.count > 1 ? 15 : 12; }
   world.ovenMeshes[1].visible = S.oven.count > 1; world.hit.oven2.visible = S.oven.count > 1;
   if (vdt > 0) {
@@ -2477,6 +2615,8 @@ const SFX = {
     const mix = c.createGain(); mix.gain.value = 1; o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(mix); mix.connect(AUD.sfxG); o.start(t0); o.stop(t0 + 0.9);
     noiseHit(t0 + 0.0, 0.1, 0.1, 'highpass', 4500, 0.8);
   },
+  goldCue() { if (!this.ok()) return; const t0 = AUD.ctx.currentTime; tone('sine', 1568, t0, 0.35, 0.13); tone('sine', 2349, t0 + 0.1, 0.5, 0.11); },   // altın an: a two-note bell
+  goldPull() { if (!this.ok()) return; const t0 = AUD.ctx.currentTime; [1046, 1318, 1568, 2093].forEach((f, i) => tone('triangle', f, t0 + i * 0.05, 0.18, 0.13)); noiseHit(t0, 0.08, 0.12, 'highpass', 5000, 0.7); },
   pop() { if (!this.ok()) return; noiseHit(AUD.ctx.currentTime, 0.025 + Math.random() * 0.03, 0.05 + Math.random() * 0.07, 'highpass', 1800 + Math.random() * 2500, 0.8); },
 };
 function audioAmbience(dt) {
@@ -2567,6 +2707,23 @@ addTX({
   footer: ['Claude Game Arena · built by Claude Sonnet 5.5', 'Claude Game Arena · built by Claude Sonnet 5.5'],
   mus_on: ['Müzik açık', 'Music on'], mus_off: ['Müzik kapalı', 'Music off'], sfx_on: ['Efektler açık', 'Effects on'], sfx_off: ['Efektler kapalı', 'Effects off'],
   confirm_restart: ['Yeniden başlansın mı? Mevcut gün kaybolur.', 'Restart? The current run is lost.'],
+  // Mayalanma Penceresi + altın pişme
+  how5: ['Hamuru havaya göre dinlendir; simit altın renge dönünce fırından çek (G).', 'Rest the dough to suit the weather; pull the simit the moment it turns golden (G).'],
+  st_proof: ['Mayalanma Penceresi', 'Proofing Window'], proof_lvl0: ['Kısa', 'Short'], proof_lvl1: ['Normal', 'Normal'], proof_lvl2: ['Uzun', 'Long'], proof_min: ['{0} dk', '{0} min'],
+  proof_win: ['Bugün ({0}) simit için ideal mayalanma {1}–{2} dk · dinlendirme {3} dk', 'Today ({0}) simit proofs best for {1}–{2} min · rest timer {3} min'],
+  pf_0: ['Az mayalanır: simit ağır ve sıkı çıkar (fiyat −%15, itibar düşer).', 'Under-proofed: dense simit (price −15%, reputation drops).'],
+  pf_1: ['Pencerenin içinde: ideal kabarma.', 'Inside the window: an ideal rise.'],
+  pf_2: ['Fazla mayalanır: hamur çöker (fiyat −%30, itibar düşer).', 'Over-proofed: the dough collapses (price −30%, reputation drops).'],
+  proof_note: ['Şekillenen hamur fırından önce tahtada dinlenir. Sıcakta çabuk, soğukta geç kabarır. Fırın yetişmezse bekleyen hamur da fazla mayalanır: ikinci fırın ya da fırına ikinci işçi yardımcı olur.', 'Shaped dough rests on the board before the oven. It rises fast in the heat and slowly in the cold. If the oven cannot keep up, waiting dough over-proofs too: a second oven or a second baker on the oven helps.'],
+  proof_today: ['Bugün: ideal {0} · ağır {1} · çökük {2} · altın {3}', 'Today: ideal {0} · dense {1} · collapsed {2} · golden {3}'],
+  board: ['Tahtada dinlenen', 'Resting on the board'], oven_n: ['Fırın {0}', 'Oven {0}'],
+  gold_title: ['Altın pişme', 'Golden bake'], gold_btn: ['Altın çek', 'Golden pull'], gold_now: ['Altın an!', 'Golden!'],
+  gold_hint: ['Simit altın renge dönünce fırın parlar ve zil çalar: o an G tuşuna ya da Altın çek düğmesine bas, fiyat +%25. Erken ya da geç basarsan kürek 2 sn bekler.', 'When the simit turns golden the oven glows and a bell rings: press G or Golden pull right then for +25% price. Too early or too late and the peel needs 2 s.'],
+  tst_gold: ['Altın pişme! {0} parça +%25', 'Golden bake! {0} pieces +25%'],
+  why_peelcd: ['Kürek henüz hazır değil.', 'The peel is not ready yet.'], why_peelmiss: ['Erken ya da geç: fırında altın an yok.', 'Too early or too late: nothing in the oven is golden.'], why_rackfull: ['Raflar dolu.', 'The racks are full.'], why_kind: ['Olmaz.', 'Not possible.'],
+  sum_gold: ['Altın pişme', 'Golden bakes'], sum_quality: ['Mayalanma: ideal %{0} · ağır {1} · çökük {2}', 'Proofing: {0}% ideal · {1} dense · {2} collapsed'],
+  tip_over: ['Hamurun çoğu çöktü: dinlendirmeyi kısalt ya da fırına ikinci işçi koy.', 'Much of the dough collapsed: shorten the rest or put a second baker on the oven.'],
+  tip_under: ['Hamur az mayalandı: soğukta dinlendirmeyi uzat.', 'The dough was under-proofed: rest it longer in the cold.'],
 });
 
 // =============================================================================================
@@ -2628,14 +2785,15 @@ function hudUpdate(force) {
   $('bSfx').innerHTML = ic(settings.sfxOn ? 'speaker' : 'speakerOff'); $('bSfx').title = t('sfx'); $('bSfx').setAttribute('aria-label', t('sfx'));
   $('bLang').textContent = t('langBtn'); $('bLang').title = t('language'); $('bLang').setAttribute('aria-label', t('language'));
   for (const b of $('speedSeg').children) { b.classList.toggle('on', +b.dataset.speed === ui.speed); b.setAttribute('aria-pressed', +b.dataset.speed === ui.speed ? 'true' : 'false'); }
-  const dock = $('dock'); const dh = '<button class="btn" data-act="plan" id="dPlan">' + ic('chart') + '<span>' + (S.phase === 'plan' ? t('plan') : t('plan')) + '</span></button><button class="btn' + (ui.salesOpen ? ' on' : '') + '" data-act="sales" id="dSales">' + ic('coin') + '<span>' + t('sales') + '</span></button>' + (S.phase === 'plan' ? '<button class="btn primary" data-act="open" id="dOpen">' + ic('play') + '<span>' + t('open_shop') + '</span></button>' : '');
+  const dock = $('dock'); const dh = '<button class="btn" data-act="plan" id="dPlan">' + ic('chart') + '<span>' + (S.phase === 'plan' ? t('plan') : t('plan')) + '</span></button><button class="btn' + (ui.salesOpen ? ' on' : '') + '" data-act="sales" id="dSales">' + ic('coin') + '<span>' + t('sales') + '</span></button>' + (S.phase === 'plan' ? '<button class="btn primary" data-act="open" id="dOpen">' + ic('play') + '<span>' + t('open_shop') + '</span></button>' : '')
+    + (S.phase === 'day' ? '<button class="btn" data-act="peel" data-a="" id="dPeel" title="' + t('gold_hint') + '">' + ic('flame') + '<span>' + t('gold_btn') + (coarse ? '' : ' (G)') + '</span></button>' : '');
   setHTML(dock, dh);
 }
 function applyLang() {
   document.documentElement.lang = settings.lang; document.title = 'Simit Fırını';
   $('brand').innerHTML = LOGO(34) + '<span>Simit Fırını</span>'; $('tLogo').innerHTML = LOGO(150);
   $('tTag').textContent = t('tag'); $('tBunting').innerHTML = buntingSvg();
-  $('tHow').innerHTML = '<li>' + t('how1') + '</li><li>' + t('how2') + '</li><li>' + t('how3', GOAL_DAY, money(GOAL_LIRA), GOAL_REP) + '</li><li>' + t('how4') + '</li>';
+  $('tHow').innerHTML = '<li>' + t('how1') + '</li><li>' + t('how2') + '</li><li>' + t('how3', GOAL_DAY, money(GOAL_LIRA), GOAL_REP) + '</li><li>' + t('how5') + '</li><li>' + t('how4') + '</li>';
   $('bPlay').textContent = t('play'); $('bCont').textContent = t('cont'); $('bSet').innerHTML = ic('gear') + '<span>' + t('settings') + '</span>'; $('bLangT').innerHTML = ic('globe') + '<span>' + t('langName') + '</span>';
   $('hint').textContent = t('hint'); $('footer').innerHTML = 'Claude Game Arena · built by <a href="https://github.com/Furkiozknn" target="_blank" rel="noopener">Claude Sonnet 5.5</a>';
   $('plClose').innerHTML = ic('close'); $('plClose').setAttribute('aria-label', t('close'));
@@ -2693,11 +2851,19 @@ function renderSide(force) {
     if (isOven) {
       let b = 0, dn = 0, tot = 0; for (const o of S.oven.ovens) for (const s of o.slots) { tot++; if (s.p) { b++; if (s.done) dn++; } }
       h += '<span>' + t('slots', tot) + '</span><b>' + t('baking', b) + '</b>' + (dn ? '<span>' + t('done_wait', dn) + '</span><b></b>' : '') + '<span>' + t('burnt_today', S.st.day.burnt) + '</span><b></b>';
+      h += '<span>' + t('board') + '</span><b>' + boardTotal() + '</b>';
     } else {
       const w = []; for (const p of unlockedList()) { const steps = DATA.products[p].steps; steps.forEach((s, i) => { if (s === id && i > 0 && S.buf[p][i]) w.push(S.buf[p][i] + '× ' + t('p_' + p)); }); }
       h += '<span>' + t('waiting', w.join(', ') || '0') + '</span><b></b>';
     }
     h += '</div>';
+    if (isOven) {
+      const pq = S.st.day.pq;
+      h += '<h3>' + ic('flame') + ' ' + t('gold_title') + '</h3><div class="row wrap">';
+      for (let i = 0; i < S.oven.count; i++) { const n = goldCount(S.oven.ovens[i]); h += btn('peel', i, '', ic('flame') + t('oven_n', i + 1) + (n ? ' · ' + n : ''), n ? 'goldy' : '', S.phase !== 'day'); }
+      h += '</div><div class="muted" style="margin-top:4px">' + t('gold_hint') + '</div>';
+      h += proofHtml() + '<div class="muted">' + t('proof_today', pq[1], pq[0], pq[2], S.st.day.gold) + '</div>';
+    }
     h += '<h3>' + t('workers') + '</h3>' + (ws.length ? ws.map(w => workerRow(w, true)).join('') : '<div class="muted">' + t('nobody') + '</div>');
     if (idle.length) h += '<div class="row wrap" style="margin-top:6px">' + idle.map(w => btn('toStation', w.id, id, ic('plus') + w.name)).join('') + '</div>';
     const rq = isOven ? '' : reqHtml(id); if (rq) h += '<h3>' + t('needs') + '</h3><div class="kv" style="grid-template-columns:1fr">' + rq + '</div>';
@@ -2759,6 +2925,15 @@ function drawSalesChart() {
   g.fillStyle = 'rgba(255,251,242,.75)'; g.font = '700 10.5px "Plus Jakarta Sans", sans-serif'; for (const hh of [6, 9, 12, 15, 18, 21]) g.fillText(String(hh), (hh - HOUR0) * bw + 2, Hh - 1);
 }
 
+// ---------- Mayalanma Penceresi controls (plan modal and oven panel) ----------
+function proofHtml() {
+  const m = x => Math.round(x * 60 / SEC_PER_HOUR), w = proofWin('simit'), cls = proofClass('simit', proofRest('simit'));
+  let h = '<h3>' + ic('dough') + ' ' + t('st_proof') + '</h3><div class="row wrap">';
+  DATA.proof.lvl.forEach((r, l) => { h += btn('proof', l, '', t('proof_lvl' + l) + ' · ' + t('proof_min', m(proofBase('simit') * r)), S.proof.lvl === l ? 'on' : ''); });
+  h += '</div><div class="muted" style="margin-top:6px">' + t('proof_win', t('wx_' + S.weather), m(w[0]), m(w[1]), m(proofRest('simit'))) + '</div>';
+  return h + '<div class="' + (cls === 1 ? 'dn' : 'up') + '" style="margin-top:2px;font-weight:700">' + t('pf_' + cls) + '</div>';
+}
+
 // ---------- plan modal ----------
 function forecastTxt() { return t('forecast', t('wx_' + S.weather), t('wx_' + S.forecast)); }
 function renderPlan() {
@@ -2783,7 +2958,7 @@ function planTab() {
       const c = costOf(p), mg = S.sell[p] - c;
       h += '<tr><td><b>' + t('p_' + p) + '</b></td><td data-l="' + t('col_cost') + '">' + money1(c) + '</td><td data-l="' + t('col_price') + '"><span class="stepper">' + btn('price', p, -0.5, ic('minus')) + '<b>' + money1(S.sell[p]) + '</b>' + btn('price', p, 0.5, ic('plus')) + '</span><div class="muted ' + (mg < 0 ? 'up' : '') + '">' + t('margin', money1(mg)) + '</div></td><td data-l="' + t('col_target') + '"><span class="stepper">' + btn('target', p, -10, ic('minus')) + '<b>' + S.target[p] + '</b>' + btn('target', p, 10, ic('plus')) + '</span></td><td data-l="' + t('col_stock') + '">' + S.racks[p] + '</td></tr>';
     }
-    h += '</table><p class="muted">' + t('hint_target') + '</p>';
+    h += '</table>' + proofHtml() + '<p class="muted">' + t('proof_note') + '</p><p class="muted">' + t('hint_target') + '</p>';
   } else if (tab === 'supply') {
     h += '<table class="t"><tr><th>' + t('col_ing') + '</th><th>' + t('col_price') + '</th><th>' + t('col_stockI') + '</th><th>' + t('col_incoming') + '</th><th>' + t('col_buy') + '</th></tr>';
     for (const k of ING_IDS) {
@@ -2840,6 +3015,8 @@ function handleAct(name, a, b) {
     case 'hire': if (tryResult(act('hire', +a), SFX.good)) { const w = S.workers[S.workers.length - 1]; toast(t('tst_hire', w.name), 'good', 'people'); } break;
     case 'upg': { const kind = a, id = b; if (tryResult(act(kind, id || undefined), SFX.good)) toast(t('tst_upg'), 'good', 'up'); break; }
     case 'contract': if (tryResult(acceptContract(+a))) SFX.good(); break;
+    case 'proof': tryResult(setProof(+a), SFX.click); break;
+    case 'peel': { const r = a === '' || a === undefined ? peelAll() : peel(+a); if (!r.ok) { toast(whyMsg(r.why), 'bad', 'flame'); SFX.bad(); } break; }
     case 'plan': openPlan(); return;
     case 'planclose': closePlan(); return;
     case 'open': beginDay(); return;
@@ -2913,11 +3090,15 @@ function toggleFs() { try { if (document.fullscreenElement) document.exitFullscr
 function showSummary(L) {
   const net = L.net, tips = [];
   const tot = L.served + L.missed;
-  if (L.sat < 0.7 && L.missed > 8) tips.push(t('tip_miss')); if (L.burnt > 2) tips.push(t('tip_burn')); if (L.wasted > L.sold * 0.35 && L.wasted > 10) tips.push(t('tip_stale')); if (S.lira < 150) tips.push(t('tip_cash')); if (!tips.length) tips.push(t('tip_ok'));
+  if (L.sat < 0.7 && L.missed > 8) tips.push(t('tip_miss')); if (L.burnt > 2) tips.push(t('tip_burn')); if (L.wasted > L.sold * 0.35 && L.wasted > 10) tips.push(t('tip_stale')); if (S.lira < 150) tips.push(t('tip_cash'));
+  const pq = L.pq || [0, 0, 0], pqT = pq[0] + pq[1] + pq[2];
+  if (pqT >= 10 && pq[2] / pqT > 0.15) tips.push(t('tip_over')); if (pqT >= 10 && pq[0] / pqT > 0.15) tips.push(t('tip_under'));
+  if (!tips.length) tips.push(t('tip_ok'));
   const row = (k, v, cls) => '<tr><td>' + k + '</td><td class="' + (cls || '') + '">' + v + '</td></tr>';
   let h = '<h1>' + t('sum_title', L.day) + '</h1><div class="sub row">' + ic(weatherIcon(L.weather)) + t('wx_' + L.weather) + '</div>';
   h += '<table class="t" style="margin-top:8px">' + row(t('sum_rev'), money(L.rev)) + row(t('sum_contract'), money(L.contractRev)) + row(t('sum_buy'), '-' + money(L.bought), 'up') + row(t('sum_invest'), '-' + money(L.invest), 'up') + row(t('sum_fines'), '-' + money(L.fines), 'up') + row(t('sum_wages'), '-' + money(L.wages), 'up') + row(t('sum_rent'), '-' + money(L.rent), 'up') + row(t('sum_fuel'), '-' + money(L.fuel), 'up') + row('<b>' + t('sum_net') + '</b>', '<b class="' + (net >= 0 ? 'dn' : 'up') + '">' + (net >= 0 ? '+' : '') + money(net) + '</b>') + '</table>';
-  h += '<div class="statgrid"><div class="stat"><div class="v">' + num(L.sold) + '</div><div class="k">' + t('sum_sold') + '</div></div><div class="stat"><div class="v">' + num(L.missed) + '</div><div class="k">' + t('sum_missed') + '</div></div><div class="stat"><div class="v">' + num(L.burnt) + '</div><div class="k">' + t('sum_burnt') + '</div></div><div class="stat"><div class="v">' + num(L.wasted) + '</div><div class="k">' + t('sum_wasted') + '</div></div></div>';
+  h += '<div class="statgrid"><div class="stat"><div class="v">' + num(L.sold) + '</div><div class="k">' + t('sum_sold') + '</div></div><div class="stat"><div class="v">' + num(L.missed) + '</div><div class="k">' + t('sum_missed') + '</div></div><div class="stat"><div class="v">' + num(L.burnt) + '</div><div class="k">' + t('sum_burnt') + '</div></div><div class="stat"><div class="v">' + num(L.wasted) + '</div><div class="k">' + t('sum_wasted') + '</div></div><div class="stat"><div class="v">' + num(L.gold || 0) + '</div><div class="k">' + t('sum_gold') + '</div></div></div>';
+  if (pqT) h += '<div class="sub" style="margin:-4px 0 8px">' + ic('dough') + ' ' + t('sum_quality', Math.round(pq[1] / pqT * 100), num(pq[0]), num(pq[2])) + '</div>';
   h += '<div class="row sp"><span>' + t('sum_rep') + ' ' + starsHtml(L.rep) + ' <b class="' + (L.dRep >= 0 ? 'dn' : 'up') + '">' + (L.dRep >= 0 ? '+' : '') + L.dRep.toFixed(2) + '</b></span><span>' + t('sum_cash') + ' <b>' + money(L.lira) + '</b></span></div>';
   h += '<p class="sub">' + tips.map(x => ic('info') + ' ' + x).join('<br>') + '</p>';
   h += '<div class="menu"><button class="btn primary" data-act="nextday" data-k="nextday">' + ic('play') + t('next_day') + '</button></div>';
@@ -2998,6 +3179,11 @@ listeners.push((type, d) => {
       break;
     }
     case 'burnt': toast(t('tst_burnt'), 'bad', 'flame'); SFX.burn(); break;
+    case 'gold': {
+      if (ui.quiet) return; toast(t('tst_gold', d.n), 'good', 'flame'); SFX.goldPull();
+      if (!RM) { const z0 = d.oi === 0 ? -0.6 : 3.0; for (let i = 0; i < 14; i++) world.sparks.emit(-6.95, FLOOR_Y + 1.4 + rr() * 0.6, z0 + (rr() - 0.5) * 1.6, 1.2 + rr() * 1.2, 0.8 + rr() * 1.4, (rr() - 0.5) * 1.2, 1.1); }
+      break;
+    }
     case 'delivery': toast(t('tst_delivery', d.qty, t('i_' + d.k)), 'info', 'van'); if (!ui.quiet) { startVan(); SFX.van(); } break;
     case 'contractok': toast(t('tst_cok', money(d.pay)), 'good', 'check'); SFX.good(); break;
     case 'contractfail': toast(t('tst_cfail', money(d.fine)), 'bad', 'warn'); SFX.bad(); break;
@@ -3018,7 +3204,7 @@ function autoDrive() {
   if (!FLAGS.auto || !ui.inGame || ui.finished) return;
   if (S.phase === 'plan') { botPlan('good'); ui.lastBotHour = -1; closePlan(); }
   else if (S.phase === 'summary') { show$('summary', false); nextDay(); saveGame(); }
-  else if (S.phase === 'day') { const hh = Math.floor(S.t / SEC_PER_HOUR); if (hh !== ui.lastBotHour) { ui.lastBotHour = hh; botHour(); } }
+  else if (S.phase === 'day') { const hh = Math.floor(S.t / SEC_PER_HOUR); if (hh !== ui.lastBotHour) { ui.lastBotHour = hh; botHour(); } botGold(); }
 }
 function fastForward(sec) {
   const wasQuiet = ui.quiet; ui.quiet = true; let rem = sec, guard = 0;
@@ -3080,6 +3266,7 @@ window.addEventListener('keydown', e => {
   if (k === 'f') { toggleFs(); return; }
   if (!ui.inGame || modalBlocking()) return;
   if (k === '1' || k === '2' || k === '3') { ui.speed = [1, 2, 4][+k - 1]; hudUpdate(true); return; }
+  if (k === 'g') { if (S.phase === 'day' && !ui.paused) handleAct('peel', ''); return; }
   if (k === '+' || k === '=') { zoomBy(0.88); return; } if (k === '-') { zoomBy(1.14); return; }
   const pan = { arrowleft: [60, 0], a: [60, 0], arrowright: [-60, 0], d: [-60, 0], arrowup: [0, 60], w: [0, 60], arrowdown: [0, -60], s: [0, -60] }[k];
   if (pan && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); panBy(pan[0], pan[1]); }
@@ -3097,6 +3284,7 @@ function frame(now) {
   const running = ui.inGame && !ui.paused && !modalBlocking() && S.phase === 'day' && !(ui.planOpen);
   if (ui.inGame && FLAGS.auto && !ui.paused) autoDrive();
   if (running) { let rem = dtReal * ui.speed; while (rem > 1e-6 && S.phase === 'day') { const d = Math.min(rem, 0.1); step(d); rem -= d; } watchProblems(); }
+  goldCue();
   const vdt = ui.paused || (ui.inGame && modalBlocking() && !open$('title')) ? 0 : (running ? dtReal * Math.min(ui.speed, 2) : (ui.inGame ? dtReal : dtReal));
   if (!ui.inGame) { titleAng += dtReal; cam.az = 0.62 + Math.sin(titleAng * 0.12) * 0.12; placeCamera(); }
   updateScenery(vdt);
