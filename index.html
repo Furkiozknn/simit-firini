@@ -38,26 +38,6 @@ window.__bootTimer = setTimeout(function () { var m = document.getElementById('l
 window.addEventListener('unhandledrejection', function (e) { window.__errors.push('promise: ' + String(e.reason && e.reason.message || e.reason)); });
 </script>
 <style>
-/* Floating Currency + Oven Pulse Keyframes */
-@keyframes floatCurrency {
-  0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
-  100% { opacity: 0; transform: translate(-50%, -46px) scale(1.15); }
-}
-.float-currency {
-  position: fixed; z-index: 100; pointer-events: none;
-  font-family: var(--font); font-weight: 800; font-size: 16px; color: var(--gold-hi);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-  animation: floatCurrency 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes ovenPulseRed {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(224, 83, 22, 0.5)); color: var(--accent); }
-  50% { filter: drop-shadow(0 0 10px rgba(255, 60, 20, 0.95)); color: #FF3300; transform: scale(1.12); }
-}
-.oven-alarm {
-  animation: ovenPulseRed 0.8s ease-in-out infinite alternate !important;
-}
-
 /* =============================================================================================
    SİMİT FIRINI — RADICAL UI/UX IDENTITY REBIRTH
    Theme: Taş Fırın & Boğaziçi Zanaatı (Artisan Stone Oven & Bosphorus Heritage)
@@ -2731,26 +2711,13 @@ function goldCue() {
   if (ovenLabel) ovenLabel.el.classList.toggle('gold', on);
 }
 const SPOT_ICON = { shop: 'shop', pier: 'ferry', school: 'school', park: 'park', office: 'office', tea: 'tea' };
-function spawnFloatCurrency(x, y, amount) {
-  const d = document.createElement('div');
-  d.className = 'float-currency';
-  d.textContent = '+' + money(amount);
-  d.style.left = x + 'px';
-  d.style.top = y + 'px';
-  document.body.appendChild(d);
-  setTimeout(() => d.remove(), 900);
-}
-
 function labelText(l) {
   const { kind, id } = l.d; let pip = 'good', txt = '', icon = '', sub = '';
   if (kind === 'station') {
     const sn = id === 'oven' ? S.oven : S.stn[id], n = workersAt('station', id).length;
     icon = id === 'oven' ? 'oven' : 'dough'; txt = t('st_' + id);
     sub = n > 0 ? n : '0';
-    if (id === 'oven') {
-      const hasUnattended = S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 30));
-      pip = hasUnattended ? 'bad' : (sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn')));
-    }
+    if (id === 'oven') pip = sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn'));
     if (id === 'oven' && S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o))) sub = t('gold_now');
     else pip = sn.flag === 'noing' ? 'bad' : (sn.flag === 'ok' ? (n ? 'good' : 'warn') : 'warn');
   } else if (kind === 'rack') {
@@ -2773,14 +2740,7 @@ function updateLabels(refreshText) {
     _v.copy(l.v).project(camera);
     const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15 && G_UI.labelsOn;
     l.el.style.display = vis ? '' : 'none';
-    if (vis) {
-      l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
-      if (l.d.kind === 'station' && l.d.id === 'oven') {
-        const hasUnattended = S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 30));
-        const iconSvg = l.el.querySelector('svg');
-        if (iconSvg) iconSvg.classList.toggle('oven-alarm', hasUnattended);
-      }
-    }
+    if (vis) l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
   }
 }
 const G_UI = { labelsOn: true };
@@ -2838,16 +2798,13 @@ function updateScenery(vdt) {
   }
   world.parts.sign.visible = true;
   const ring = world.parts.ring;
-  let ringPos = null, ringScale = 1.6;
-  if (ui.selWorker) {
-    const a = agents.get(ui.selWorker);
-    if (a) { ringPos = [a.x, standY(a.x, a.z) + 0.02, a.z]; ringScale = 1.2; }
-  } else if (sel) {
-    if (sel.kind === 'station') { ringPos = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; ringScale = sel.id === 'oven' ? 2.4 : 1.7; }
-    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; ringPos = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; ringScale = sel.id === 'shop' ? 2.3 : 1.5; }
-    else if (sel.kind === 'rack') { ringPos = [-2.0, FLOOR_Y + 0.02, 1.4]; ringScale = 2.8; }
-  }
-  if (ringPos) { ring.visible = true; ring.position.set(ringPos[0], ringPos[1], ringPos[2]); ring.scale.set(ringScale * (1 + 0.04 * Math.sin(simTime * 5)), 1, ringScale * (sel && sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
+  if (sel) {
+    let p = null, s = 1.6;
+    if (sel.kind === 'station') { p = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; s = sel.id === 'oven' ? 2.4 : 1.7; }
+    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; p = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; s = sel.id === 'shop' ? 2.3 : 1.5; }
+    else if (sel.kind === 'rack') { p = [-2.0, FLOOR_Y + 0.02, 1.4]; s = 2.8; }
+    if (p) { ring.visible = true; ring.position.set(p[0], p[1], p[2]); ring.scale.set(s * (1 + 0.04 * Math.sin(simTime * 5)), 1, s * (sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
+  } else ring.visible = false;
   // dough lump breathes while kneading
   const kn = S.stn.knead; world.lump.scale.set(1 + (kn.act > 0 ? 0.12 * Math.sin(simTime * 12) : 0), 1 + (kn.act > 0 ? 0.18 * Math.cos(simTime * 12) : 0), 1);
   world.lump.visible = S.buf.simit[1] + S.buf.simit[2] + S.buf.simit[3] + S.buf.simit[4] + S.racks.simit > 0 || kn.flag === 'ok';
@@ -2906,16 +2863,7 @@ function initInput(canvas) {
       else if (!gesture.moved) UI.select('worker', gesture.w.id);
     } else if (gesture.mode === 'pan' && !gesture.moved) {
       const hit = pickProxy(e.clientX, e.clientY);
-      if (hit) {
-        if (ui.selWorker && (hit.kind === 'station' || hit.kind === 'spot')) {
-          UI.dropWorker(ui.selWorker, hit);
-          UI.select(null);
-        } else {
-          UI.select(hit.kind, hit.id);
-        }
-      } else {
-        UI.select(null);
-      }
+      if (hit) UI.select(hit.kind, hit.id); else UI.select(null);
     }
     if (ptrs.size === 0) gesture = null; else if (ptrs.size === 1) gesture = { mode: 'pan', sx: 0, sy: 0, moved: true };
     drag = drag && gesture && gesture.mode === 'worker' ? drag : null;
@@ -3646,14 +3594,6 @@ listeners.push((type, d) => {
       if (rr() < 0.85) spawnCustomer(d.spot);
       if (now - lastCoin > 140) { lastCoin = now; SFX.coin(); }
       if (d.spot !== 'shop' && now - lastCall > 3500 && rr() < 0.5) { lastCall = now; SFX.call(); }
-      const spotDef = SPOT3D[d.spot];
-      if (spotDef) {
-        _v.set(spotDef.pos[0], streetY(spotDef.pos[1]) + 1.2, spotDef.pos[1]).project(camera);
-        const sx = (_v.x * 0.5 + 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight;
-        if (_v.z < 1 && sx >= 0 && sx <= innerWidth && sy >= 0 && sy <= innerHeight) {
-          spawnFloatCurrency(sx, sy, d.q * S.sell[d.p]);
-        }
-      }
       break;
     }
     case 'burnt': toast(t('tst_burnt'), 'bad', 'flame'); SFX.burn(); break;
