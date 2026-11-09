@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="arena-game" content="simit-firini">
 <title>Simit Fırını</title>
 <meta name="description" content="A 3D simit bakery tycoon on an old Istanbul street, redesigned as a hand-painted bakery with a chalkboard UI: knead, dip, bake and send sellers out. Plays in the browser.">
 <meta property="og:type" content="website">
@@ -672,6 +673,7 @@ table.t td {
     <div class="menu">
       <button class="btn primary" id="bPlay" disabled></button>
       <button class="btn" id="bCont"></button>
+      <button class="btn" id="bDaily" disabled></button>
       <div class="row"><button class="btn grow" id="bSet"></button><button class="btn" id="bLangT"></button></div>
     </div>
     <div id="loadmsg"></div>
@@ -1052,9 +1054,11 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage unavailable */ } },
 };
-const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best' };
+const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best', daily: 'arena.simitfirini.daily' };
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
-const RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+// reduced motion: the OS setting, or the arena-kit accessibility panel when it is present (it starts from the OS setting)
+let RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+if (window.Arena) { RM = !!Arena.settings.reducedMotion; Arena.on('settings', st => { RM = !!st.reducedMotion; }); }
 const settings = Object.assign({ master: 0.8, music: 0.6, sfx: 0.8, lang: /^tr/i.test(navigator.language || '') ? 'tr' : 'en', quality: (coarse && Math.min(innerWidth, innerHeight) < 820) ? 'low' : 'high', musicOn: true, sfxOn: true }, store.get(KEY.settings) || {});
 if (FLAGS.lang === 'en' || FLAGS.lang === 'tr') settings.lang = FLAGS.lang;
 const saveSettings = () => store.set(KEY.settings, settings);
@@ -2449,6 +2453,7 @@ function initWorld(canvas) {
   canvasEl = canvas;
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lowQ() ? 1 : 1.5)); renderer.shadowMap.enabled = !FLAGS.low && settings.quality !== 'low'; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  attachPerf();
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x8DC9F4); scene.fog = new THREE.Fog(0xB4DAF2, 55, 170);
   camera = new THREE.PerspectiveCamera(28, 1, 1, 400);
   hemiL = new THREE.HemisphereLight(0xD6EAF8, 0xA39378, 1); scene.add(hemiL);
@@ -2989,6 +2994,13 @@ function audioAmbience(dt) {
 // TEXT (Turkish first, English second). Every visible string goes through t().
 // =============================================================================================
 addTX({
+  daily: ['Günün Meydan Okuması', 'Daily challenge'], daily_info: ['seri {0} · en iyi {1}', 'streak {0} · best {1}'], daily_done: ['bugün tamam · seri {0}', 'done today · streak {0}'],
+  daily_cont: ['devam: {0}. gün', 'continue: day {0}'], daily_start: ['Günün Meydan Okuması {0}: herkes aynı hava ve çırakla başlar', 'Daily challenge {0}: everyone starts with the same weather and apprentices'],
+  daily_res: ['Günün Meydan Okuması {0}: seri {1} gün · en iyi {2}', 'Daily challenge {0}: streak {1} days · best {2}'], daily_old: ['Bu meydan okuma {0} gününündü; seri bugüne sayılmadı.', 'This challenge was for {0}; the streak was not counted for today.'],
+  share: ['Paylaş', 'Share'], another: ['Başka oyun', 'Another game'], a11y: ['Erişilebilirlik', 'Accessibility'], a11y_open: ['Aç', 'Open'],
+  share_won: ['{0}. günde kazandım · kasa {1} · {2} yıldız', 'Won on day {0} · till {1} · {2} stars'], share_end: ['{0}. gün · kasa {1} · {2} yıldız', 'Day {0} · till {1} · {2} stars'],
+  share_daily: ['Günün Meydan Okuması {0} · seri {1}', 'Daily challenge {0} · streak {1}'],
+  aw_win: ['Fırın ayakta: zafer', 'The bakery stands: victory'], aw_early: ['15. günden önce zafer', 'Victory before day 15'], aw_menu: ['Bütün tarifler açıldı', 'Every recipe unlocked'],
   app: ['Simit Fırını', 'Simit Fırını'],
   tag: ['Mahallenin en ünlü simit fırını olmaya hazır mısın?', 'Ready to run the most famous simit bakery on the street?'],
   how1: ['Hamuru yoğur, şekillendir, pekmeze batır, susama bula ve fırında pişir.', 'Knead, shape, dip in molasses, roll in sesame and bake.'],
@@ -3144,7 +3156,7 @@ function hudUpdate(force) {
   setHTML(dock, dh);
 }
 function applyLang() {
-  document.documentElement.lang = settings.lang; document.title = 'Simit Fırını';
+  document.documentElement.lang = settings.lang; document.title = 'Simit Fırını'; if (window.Arena) Arena.lang(settings.lang);
   $('brand').innerHTML = LOGO(34) + '<span>Simit Fırını</span>'; $('tLogo').innerHTML = LOGO(150);
   $('tTag').textContent = t('tag'); $('tBunting').innerHTML = buntingSvg();
   $('tHow').innerHTML = '<li>' + t('how1') + '</li><li>' + t('how2') + '</li><li>' + t('how3', GOAL_DAY, money(GOAL_LIRA), GOAL_REP) + '</li><li>' + t('how5') + '</li><li>' + t('how4') + '</li>';
@@ -3153,7 +3165,7 @@ function applyLang() {
   $('plClose').innerHTML = ic('close'); $('plClose').setAttribute('aria-label', t('close'));
   $('pTitle').textContent = t('paused'); $('sTitle').textContent = t('set_title'); $('sClose').textContent = t('done');
   $('pMenu').innerHTML = '<button class="btn primary" data-act="resume">' + ic('play') + t('resume') + '</button><button class="btn" data-act="restart">' + t('restart') + '</button><button class="btn" data-act="settings">' + ic('gear') + t('settings') + '</button><button class="btn" data-act="mainmenu">' + ic('home') + t('menu') + '</button>';
-  const sv = store.get(KEY.save); $('bCont').classList.toggle('hidden', !(sv && sv.S && sv.S.v === 1)); showBest();
+  const sv = store.get(KEY.save); $('bCont').classList.toggle('hidden', !(sv && sv.S && sv.S.v === 1)); showBest(); dailyButton();
   if (!ui.loadDone) $('loadmsg').textContent = t('loading', ui.loadN || 0, 2);
   renderSettings(); if (ui.inGame) { hudUpdate(true); renderSide(true); renderSales(true); if (ui.planOpen) renderPlan(); }
   updateLabels(true);
@@ -3378,7 +3390,7 @@ function handleAct(name, a, b) {
     case 'deselect': UI.select(null); return;
     case 'focusSpot': UI.select('spot', a); return;
     case 'resume': setPaused(false); return;
-    case 'restart': if (confirm(t('confirm_restart'))) { setPaused(false); startNew(); } return;
+    case 'restart': if (confirm(t('confirm_restart'))) { setPaused(false); if (S.daily) startDaily(true); else startNew(); } return;
     case 'settings': openSettings(); return;
     case 'mainmenu': setPaused(false); toTitle(); return;
     default: flowAct(name, a, b); return;
@@ -3428,13 +3440,17 @@ function renderSettings() {
   $('sBody').innerHTML = sl('vMaster', t('vol_master'), settings.master) + sl('vMusic', t('vol_music'), settings.music) + sl('vSfx', t('vol_sfx'), settings.sfx)
     + '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('lang_lbl') + '</span>' + seg('lang', [['tr', 'TR'], ['en', 'EN']], settings.lang) + '</div>'
     + '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('quality') + '</span>' + seg('quality', [['low', t('q_low')], ['high', t('q_high')]], settings.quality) + '</div>'
-    + '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('fullscreen') + '</span><button class="btn" data-set="fs">' + ic('fs') + '<span>' + t('fullscreen') + '</span></button></div>';
+    + '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('fullscreen') + '</span><button class="btn" data-set="fs">' + ic('fs') + '<span>' + t('fullscreen') + '</span></button></div>'
+    + (window.Arena ? '<div class="sliderrow" style="grid-template-columns:110px 1fr"><span>' + t('a11y') + '</span><button class="btn" data-set="a11y" id="bA11y">' + t('a11y_open') + '</button></div>' : '');
   for (const [id, key] of [['vMaster', 'master'], ['vMusic', 'music'], ['vSfx', 'sfx']]) {
     const inp = $(id); inp.addEventListener('input', () => { settings[key] = +inp.value / 100; inp.nextElementSibling.textContent = inp.value; audioApply(); saveSettings(); });
   }
 }
+// arena-kit: dynamic pixel ratio for weak GPUs, never above this quality's cap (re-attached when the quality changes)
+let perfHandle = null;
+function attachPerf() { if (!window.Arena || !renderer) return; if (perfHandle) perfHandle.stop(); perfHandle = Arena.perf.attach(renderer, { max: Math.min(devicePixelRatio || 1, lowQ() ? 1 : 1.5) }); }
 function applyQuality() {
-  if (!renderer) return; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lowQ() ? 1 : 1.5)); renderer.shadowMap.enabled = !lowQ(); sunL.castShadow = !lowQ();
+  if (!renderer) return; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lowQ() ? 1 : 1.5)); attachPerf(); renderer.shadowMap.enabled = !lowQ(); sunL.castShadow = !lowQ();
   scene.traverse(o => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); } }); resizeRenderer();
 }
 function setLang(l) { settings.lang = l; saveSettings(); applyLang(); }
@@ -3459,13 +3475,26 @@ function showSummary(L) {
   $('suBody').innerHTML = h; show$('summary'); focusFirst('summary');
 }
 function showEnd(res) {
-  const rec = recordBest(res);
+  const daily = !!S.daily, rec = daily ? false : recordBest(res);
+  let dailyLine = '';
+  if (daily && window.Arena && !S.dailyDone) {
+    const d = Arena.daily(); S.dailyDone = true;
+    if (S.daily === d.day && !FLAGS.auto) { S.dailyRes = d.complete(Math.max(0, Math.round(S.lira))); }
+  }
+  if (daily) dailyLine = S.dailyRes ? t('daily_res', dayText(S.daily), S.dailyRes.streak, S.dailyRes.best) : t('daily_old', dayText(S.daily));
+  if (res === 'won') { arenaAward('win', 'aw_win'); if (S.day <= 15) arenaAward('early', 'aw_early'); }
+  if (unlockedList().length === PRODUCT_IDS.length) arenaAward('menu', 'aw_menu');
   const title = res === 'won' ? t('win_title') : res === 'bankrupt' ? t('lose_title') : t('time_title');
   const text = res === 'won' ? t('win_text', S.day, money(S.lira), S.rep.toFixed(1)) : res === 'bankrupt' ? t('lose_text') : t('time_text', S.day, money(S.lira), S.rep.toFixed(1));
   let h = '<div style="text-align:center"><div class="logo">' + LOGO(res === 'won' ? 110 : 90) + '</div><h1>' + title + '</h1><p class="sub">' + text + '</p>' + (rec ? '<p class="newrec">' + ic('star') + ' ' + t('new_record') + '</p>' : '') + '</div>';
   h += '<div class="statgrid"><div class="stat"><div class="v">' + S.day + '</div><div class="k">' + t('days_played') + '</div></div><div class="stat"><div class="v">' + money(S.lira) + '</div><div class="k">' + t('lira') + '</div></div><div class="stat"><div class="v">' + S.rep.toFixed(1) + '</div><div class="k">' + t('stars') + '</div></div></div>';
-  h += '<div class="menu">' + (res !== 'bankrupt' ? '<button class="btn primary" data-act="endless" data-k="endless">' + t('endless') + '</button>' : '') + '<button class="btn' + (res === 'bankrupt' ? ' primary' : '') + '" data-act="again" data-k="again">' + t('again') + '</button><button class="btn" data-act="mainmenu2" data-k="mm2">' + ic('home') + t('menu') + '</button></div>';
-  $('enBody').innerHTML = h; show$('endM'); focusFirst('endM'); store.del(KEY.save); ui.finished = true; ui.endShown = true; $('bCont').classList.add('hidden');
+  if (dailyLine) h += '<p class="sub" style="text-align:center" id="enDaily">' + dailyLine + '</p>';
+  const others = window.Arena ? Arena.games.filter(g => g !== 'simit-firini') : [];
+  h += '<div class="menu">' + (res !== 'bankrupt' ? '<button class="btn primary" data-act="endless" data-k="endless">' + t('endless') + '</button>' : '') + '<button class="btn' + (res === 'bankrupt' ? ' primary' : '') + '" data-act="again" data-k="again">' + t('again') + '</button>'
+    + (window.Arena ? '<div class="row"><button class="btn grow" data-act="share" id="enShare">' + t('share') + '</button><a class="btn grow" id="enAnother" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="https://furkiozknn.github.io/' + others[Math.floor(Math.random() * others.length)] + '/">' + t('another') + '</a></div>' : '')
+    + '<button class="btn" data-act="mainmenu2" data-k="mm2">' + ic('home') + t('menu') + '</button></div>';
+  $('enBody').innerHTML = h; show$('endM'); focusFirst('endM'); ui.finished = true; ui.endShown = true;
+  if (daily) store.del(KEY.daily); else { store.del(KEY.save); $('bCont').classList.add('hidden'); }
   if (res === 'won') SFX.good(); else SFX.bad();
 }
 function onDayEnd(L) {
@@ -3473,7 +3502,37 @@ function onDayEnd(L) {
   if (FLAGS.auto && S.phase === 'summary') return;
   S.phase === 'ended' ? showEnd(S.result) : showSummary(L);
 }
-function saveGame() { store.set(KEY.save, { v: 1, S }); }
+function saveGame() { store.set(S.daily ? KEY.daily : KEY.save, { v: 1, S }); } // a daily run has its own slot
+
+// ---------- arena-kit: daily challenge, share, badges ----------
+// A daily run is a normal 20-day run started from Arena.daily().seed (same weather, apprentices and contracts for
+// everyone that day). It is saved in its own slot, so the campaign run and the best result stay untouched.
+// Score = the till at the end of the run.
+const ARENA_URL = 'https://furkiozknn.github.io/simit-firini/';
+const dayText = d => String(d).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+function dailySave(day) { const sv = store.get(KEY.daily); return sv && sv.S && sv.S.v === 1 && sv.S.daily === day ? sv : null; }
+function dailyButton() {
+  const b = $('bDaily'); if (!window.Arena) { b.classList.add('hidden'); return; }
+  const d = Arena.daily(), sv = dailySave(d.day);
+  b.style.flexWrap = 'wrap'; b.style.whiteSpace = 'normal';
+  b.innerHTML = ic('flag') + '<span>' + t('daily') + '</span><small style="flex-basis:100%;font-weight:600;opacity:.8">' + (sv ? t('daily_cont', sv.S.day) : d.done ? t('daily_done', d.streak) : t('daily_info', d.streak, d.best)) + '</small>';
+}
+function startDaily(fresh) {
+  if (!window.Arena) return;
+  const d = Arena.daily(), sv = fresh ? null : dailySave(d.day);
+  if (sv) { resumeRun(sv); return; }
+  audioInit(); audioResume(); musicStart();
+  newGame(d.seed); S.daily = d.day; enterGame(); saveGame();
+  toast(t('daily_start', dayText(d.day)), 'info', 'flag');
+  if (!FLAGS.auto) openPlan();
+}
+function shareResult() {
+  if (!window.Arena) return;
+  const line = S.result === 'won' ? t('share_won', S.day, money(S.lira), S.rep.toFixed(1)) : t('share_end', S.day, money(S.lira), S.rep.toFixed(1));
+  const lines = [line]; if (S.daily) lines.unshift(t('share_daily', dayText(S.daily), S.dailyRes ? S.dailyRes.streak : 0));
+  Arena.share({ title: 'Simit Fırını', lines, url: ARENA_URL });
+}
+function arenaAward(id, key) { if (window.Arena && !FLAGS.auto) Arena.award('simit-firini:' + id, 'Simit Fırını · ' + t(key)); }
 
 // =============================================================================================
 // MAIN: flow, events, input, loop, test hooks
@@ -3503,6 +3562,10 @@ function startNew() {
 function continueGame() {
   audioInit(); audioResume(); musicStart();
   const sv = store.get(KEY.save); if (!(sv && sv.S && sv.S.v === 1)) { startNew(); return; }
+  resumeRun(sv);
+}
+function resumeRun(sv) {
+  audioInit(); audioResume(); musicStart();
   loadState(sv.S); fixOvens(); enterGame(); if (S.phase === 'day') S.phase = 'plan'; if (S.phase === 'plan') openPlan(); else if (S.phase === 'summary') nextDay();
   afterChange();
 }
@@ -3514,7 +3577,8 @@ function flowAct(name) {
   switch (name) {
     case 'nextday': show$('summary', false); nextDay(); saveGame(); SFX.click(); toast(t('tst_saved'), 'info', 'check'); enterGameKeep(); openPlan(); break;
     case 'endless': show$('endM', false); ui.endShown = false; ui.finished = false; goEndless(); nextDay(); saveGame(); enterGameKeep(); openPlan(); break;
-    case 'again': show$('endM', false); startNew(); break;
+    case 'again': show$('endM', false); if (S.daily) startDaily(true); else startNew(); break;
+    case 'share': shareResult(); break;
     case 'mainmenu2': show$('endM', false); toTitle(); break;
   }
 }
@@ -3578,6 +3642,7 @@ window.simitfirini = {
   get S() { return S; }, DATA, FLAGS, assets: assetsInfo, ui, get result() { return S && S.result; }, get finished() { return ui.finished; }, stateSummary,
   get cam() { return cam; }, get fps() { return Math.round(fpsEma); }, get calls() { return renderer ? renderer.info.render.calls : 0; }, get tris() { return renderer ? renderer.info.render.triangles : 0; },
   get errors() { return window.__errors; }, get missingText() { return window.__missing || []; }, bot: botPlan,
+  get reducedMotion() { return RM; },
 };
 
 // ---------- input ----------
@@ -3588,6 +3653,7 @@ document.addEventListener('click', e => {
   if (s) {
     const k = s.dataset.set, v = s.dataset.v;
     if (k === 'lang') setLang(v); else if (k === 'quality') { settings.quality = v; saveSettings(); applyQuality(); renderSettings(); } else if (k === 'fs') toggleFs();
+    else if (k === 'a11y' && window.Arena) Arena.openSettings();
     SFX.click(); return;
   }
   const sp = e.target.closest('[data-speed]'); if (sp) { ui.speed = +sp.dataset.speed; hudUpdate(true); SFX.click(); }
@@ -3599,6 +3665,7 @@ $('bMusic').addEventListener('click', toggleMusic); $('bSfx').addEventListener('
 $('bLangT').addEventListener('click', () => setLang(settings.lang === 'tr' ? 'en' : 'tr'));
 $('bPause').addEventListener('click', () => { if (S.phase === 'day' || ui.paused) setPaused(!ui.paused); });
 $('bPlay').addEventListener('click', () => startNew()); $('bCont').addEventListener('click', () => continueGame());
+$('bDaily').addEventListener('click', () => startDaily(false));
 $('bSet').addEventListener('click', () => { audioInit(); openSettings(); }); $('sClose').addEventListener('click', closeSettings);
 $('plClose').addEventListener('click', () => closePlan());
 function onEscape() {
@@ -3627,7 +3694,13 @@ window.addEventListener('keydown', e => {
 });
 function resizeHudVar() { const h = $('hud').offsetHeight || 56; document.documentElement.style.setProperty('--hudH', h + 8 + 'px'); }
 window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && ui.inGame && S.phase === 'day' && !ui.paused) setPaused(true); });
+// hidden tab: the pause menu opens during the day (as before) and the audio stops, following the arena-kit
+// "pause when the tab is hidden" setting; on return the pause menu stays open until the player resumes
+const autoPause = () => { if (ui.inGame && S.phase === 'day' && !ui.paused) setPaused(true); };
+if (window.Arena) {
+  Arena.on('pause', () => { autoPause(); if (AUD.ctx && AUD.ctx.state === 'running') AUD.ctx.suspend(); });
+  Arena.on('resume', () => { audioResume(); });
+} else document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
 
 // ---------- loop ----------
 let last = performance.now(), fpsEma = 60, hudAcc = 0, ringAcc = 0, sideAcc = 0, dbgAcc = 0, titleAng = 0;
@@ -3663,7 +3736,7 @@ function boot() {
   if (FLAGS.low) settings.quality = 'low';
   initWorld($('c')); initInput($('c')); initCrowd(); initLabels(); resizeRenderer(); fitCamera();
   newGame(7); S.phase = 'plan';
-  applyLang(); ui.loadDone = true; $('loadmsg').textContent = ''; $('bPlay').disabled = false; $('bPlay').focus();
+  applyLang(); ui.loadDone = true; $('loadmsg').textContent = ''; $('bPlay').disabled = false; $('bDaily').disabled = false; $('bPlay').focus();
   if (FLAGS.shot) { /* reserved for screenshot helpers */ }
   requestAnimationFrame(frame);
   if (FLAGS.auto || FLAGS.sim) {
