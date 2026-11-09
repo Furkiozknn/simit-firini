@@ -2798,13 +2798,16 @@ function updateScenery(vdt) {
   }
   world.parts.sign.visible = true;
   const ring = world.parts.ring;
-  if (sel) {
-    let p = null, s = 1.6;
-    if (sel.kind === 'station') { p = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; s = sel.id === 'oven' ? 2.4 : 1.7; }
-    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; p = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; s = sel.id === 'shop' ? 2.3 : 1.5; }
-    else if (sel.kind === 'rack') { p = [-2.0, FLOOR_Y + 0.02, 1.4]; s = 2.8; }
-    if (p) { ring.visible = true; ring.position.set(p[0], p[1], p[2]); ring.scale.set(s * (1 + 0.04 * Math.sin(simTime * 5)), 1, s * (sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
-  } else ring.visible = false;
+  let ringPos = null, ringScale = 1.6;
+  if (ui.selWorker) {
+    const a = agents.get(ui.selWorker);
+    if (a) { ringPos = [a.x, standY(a.x, a.z) + 0.02, a.z]; ringScale = 1.2; }
+  } else if (sel) {
+    if (sel.kind === 'station') { ringPos = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; ringScale = sel.id === 'oven' ? 2.4 : 1.7; }
+    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; ringPos = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; ringScale = sel.id === 'shop' ? 2.3 : 1.5; }
+    else if (sel.kind === 'rack') { ringPos = [-2.0, FLOOR_Y + 0.02, 1.4]; ringScale = 2.8; }
+  }
+  if (ringPos) { ring.visible = true; ring.position.set(ringPos[0], ringPos[1], ringPos[2]); ring.scale.set(ringScale * (1 + 0.04 * Math.sin(simTime * 5)), 1, ringScale * (sel && sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
   // dough lump breathes while kneading
   const kn = S.stn.knead; world.lump.scale.set(1 + (kn.act > 0 ? 0.12 * Math.sin(simTime * 12) : 0), 1 + (kn.act > 0 ? 0.18 * Math.cos(simTime * 12) : 0), 1);
   world.lump.visible = S.buf.simit[1] + S.buf.simit[2] + S.buf.simit[3] + S.buf.simit[4] + S.racks.simit > 0 || kn.flag === 'ok';
@@ -2863,7 +2866,16 @@ function initInput(canvas) {
       else if (!gesture.moved) UI.select('worker', gesture.w.id);
     } else if (gesture.mode === 'pan' && !gesture.moved) {
       const hit = pickProxy(e.clientX, e.clientY);
-      if (hit) UI.select(hit.kind, hit.id); else UI.select(null);
+      if (hit) {
+        if (ui.selWorker && (hit.kind === 'station' || hit.kind === 'spot')) {
+          UI.dropWorker(ui.selWorker, hit);
+          UI.select(null);
+        } else {
+          UI.select(hit.kind, hit.id);
+        }
+      } else {
+        UI.select(null);
+      }
     }
     if (ptrs.size === 0) gesture = null; else if (ptrs.size === 1) gesture = { mode: 'pan', sx: 0, sy: 0, moved: true };
     drag = drag && gesture && gesture.mode === 'worker' ? drag : null;
