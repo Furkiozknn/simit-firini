@@ -210,7 +210,7 @@ svg.arrow { width: 12px; height: 12px; }
 #hud {
   position: fixed; top: 8px; left: 8px; right: 8px; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 6px 12px 9px 12px; flex-wrap: nowrap;
+  padding: 6px 12px 9px 12px; flex-wrap: wrap; row-gap: 6px; /* wraps instead of overlapping when it does not fit */
 }
 #hud .brand {
   display: flex; align-items: center; gap: 8px;
@@ -221,7 +221,7 @@ svg.arrow { width: 12px; height: 12px; }
 #hud .brand svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
 #hud .stats {
   display: flex; gap: 6px; align-items: center; justify-content: center;
-  flex: 1; min-width: 0; flex-wrap: nowrap;
+  flex: 1; min-width: auto; flex-wrap: wrap;
 }
 
 /* Status Metric Chips */
@@ -242,7 +242,7 @@ svg.arrow { width: 12px; height: 12px; }
 .stars { display: inline-flex; gap: 2px; align-items: center; }
 .stars svg { width: 17px; height: 17px; }
 
-#hud .tools { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+#hud .tools { display: flex; gap: 6px; align-items: center; flex-shrink: 0; margin-left: auto; }
 .seg {
   display: inline-flex; background: rgba(0, 0, 0, 0.38);
   border: 1.5px solid rgba(243, 186, 66, 0.22);
@@ -584,13 +584,31 @@ table.t td {
   #dock { bottom: 18px; }
 }
 
+/* narrower than one full row: logo + controls on top, status chips on a row of their own below */
+@media (max-width: 1240px) {
+  #hud .tools { order: 1; }
+  #hud .stats { order: 2; flex: 1 1 100%; }
+}
+
 @media (max-width: 680px) {
-  #hud { padding: 4px 8px 7px 8px; }
+  #hud { left: 6px; right: 6px; padding: 4px 6px 7px 6px; }
+  /* phones: the controls take the whole top row, logo and chips share the rows below */
+  #hud .tools { flex: 1 1 100%; justify-content: space-between; gap: 4px; }
+  #hud .brand { order: 2; }
+  #hud .stats { order: 3; flex: 1 1 0; gap: 4px; }
+  .seg { padding: 0; gap: 0; }
   #hud .brand svg { width: 28px; height: 28px; }
   .chip { height: 34px; padding: 0 8px; font-size: 13px; }
   .chip svg { width: 16px; height: 16px; }
   .seg .btn { min-height: 32px; padding: 0 8px; font-size: 12.5px; }
   #hud .btn.icon { width: 36px; min-height: 36px; }
+}
+/* very narrow phones: the logo would push the chips onto a third row */
+@media (max-width: 400px) { #hud .brand { display: none; } }
+/* touch screens keep 44 px targets on phones too (the rule above would shrink them) */
+@media (max-width: 680px) and (pointer: coarse) {
+  .seg .btn { min-height: 44px; min-width: 44px; }
+  #hud .btn.icon { width: 44px; min-height: 44px; }
 }
 
 @media (max-height: 560px) {
@@ -3703,6 +3721,8 @@ window.addEventListener('keydown', e => {
   if (pan && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); panBy(pan[0], pan[1]); }
 });
 function resizeHudVar() { const h = $('hud').offsetHeight || 56; document.documentElement.style.setProperty('--hudH', h + 8 + 'px'); }
+// the HUD wraps to more rows on narrow screens and its chips change text, so follow its height
+if (window.ResizeObserver) new ResizeObserver(() => { if (ui.inGame) resizeHudVar(); }).observe($('hud'));
 window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); });
 // hidden tab: the pause menu opens during the day (as before) and the audio stops, following the arena-kit
 // "pause when the tab is hidden" setting; on return the pause menu stays open until the player resumes
