@@ -603,6 +603,12 @@ table.t td {
   .seg .btn { min-height: 32px; padding: 0 8px; font-size: 12.5px; }
   #hud .btn.icon { width: 36px; min-height: 36px; }
 }
+/* phones: the dock spans the screen and its 2-3 buttons share it (3bcebe6's 110 px minimum made it wider than 360 px) */
+@media (max-width: 680px) {
+  #dock { left: 8px; right: 8px; transform: none; justify-content: center; gap: 6px; padding: 6px; }
+  #dock .btn { flex: 1 1 0; min-width: 0; max-width: 190px; min-height: 46px; padding: 4px 8px; gap: 6px; font-size: 14px; line-height: 1.15; white-space: normal; text-align: center; }
+  #dock .btn svg { flex: none; }
+}
 /* very narrow phones: the logo would push the chips onto a third row */
 @media (max-width: 400px) { #hud .brand { display: none; } }
 /* touch screens keep 44 px targets on phones too (the rule above would shrink them) */
