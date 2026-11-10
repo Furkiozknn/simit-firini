@@ -1,0 +1,17 @@
+{
+  "game": "simit-firini",
+  "recorded": "2026-11-10T00:50:06.890Z",
+  "commit": "4869df1",
+  "entrySha": "d3e4abf1cbdd",
+  "run": "() => {\n      const SF = window.simitfirini, SEEDS = [1, 2, 3, 4, 5, 6];\n      const out = { games: 0, won: 0, bankrupt: 0, timeup: 0, lira: 0, rep: 0, days: 0 };\n      for (const seed of SEEDS) {\n        SF.FLAGS.seed = seed;\n        document.getElementById('bPlay').click();\n        if (SF.S.seed !== seed || SF.S.day !== 1) throw new Error(`gate: seed ${seed} did not start a new game (seed ${SF.S.seed}, day ${SF.S.day})`);\n        window.simitfiriniSim(200000);\n        const S = SF.S;\n        if (S.phase !== 'ended') throw new Error(`gate: seed ${seed} did not end (day ${S.day}, phase ${S.phase})`);\n        out.games++; out[S.result === 'won' ? 'won' : S.result === 'bankrupt' ? 'bankrupt' : 'timeup']++;\n        out.lira += Math.round(S.lira); out.rep += S.rep; out.days += S.day;\n      }\n      out.rep = Math.round(out.rep * 100) / 100;\n      window.__gateM = out;\n    }",
+  "metrics": {
+    "games": 6,
+    "won": 6,
+    "bankrupt": 0,
+    "timeup": 0,
+    "lira": 145691,
+    "rep": 24.96,
+    "days": 111,
+    "gameErrors": 0
+  }
+}
