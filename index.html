@@ -438,6 +438,39 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
 @keyframes goldPulse { from { filter: brightness(1); } to { filter: brightness(1.3); } }
 @media (pointer: coarse) { .lbl { min-height: 44px; padding: 6px 14px; } }
 
+/* Tap-to-assign: worker selection outline & station assignment target states */
+.lbl.lbl-worker {
+  background: linear-gradient(180deg, #2D1A10 0%, #170E08 100%);
+  border: 1.5px solid rgba(243, 186, 66, 0.45);
+  z-index: 12;
+}
+.lbl.lbl-worker.sel {
+  background: linear-gradient(180deg, #E05316 0%, #A83608 100%);
+  border-color: #FFD470;
+  outline: 3px solid #FFD470;
+  outline-offset: 3px;
+  box-shadow: 0 0 18px rgba(255, 212, 112, 0.9), 0 4px 14px rgba(0, 0, 0, 0.85);
+  animation: workerPulse 0.9s ease-in-out infinite alternate;
+  z-index: 25;
+}
+@keyframes workerPulse {
+  from { outline-color: rgba(255, 212, 112, 0.5); outline-offset: 2px; }
+  to { outline-color: rgba(255, 212, 112, 1); outline-offset: 4.5px; }
+}
+.lbl.target {
+  border-color: #9ED67A;
+  box-shadow: 0 0 14px rgba(158, 214, 122, 0.65), 0 4px 12px rgba(10, 4, 1, 0.7);
+  animation: targetBounce 1s ease-in-out infinite alternate;
+}
+.lbl.target.idle-target {
+  border-color: #FFD470;
+  box-shadow: 0 0 18px rgba(255, 212, 112, 0.85), 0 4px 12px rgba(10, 4, 1, 0.75);
+}
+@keyframes targetBounce {
+  from { transform: translate(-50%, -100%) scale(1); }
+  to { transform: translate(-50%, -100%) scale(1.05); }
+}
+
 /* =============================================================================================
    BOTTOM DOCK: Baker's Master Tool Console
    ============================================================================================= */
@@ -454,7 +487,7 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
   box-shadow: 0 0 22px rgba(255, 208, 64, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 #dPeel.hot { animation: goldPulse .8s ease-in-out infinite alternate; }
-@media (prefers-reduced-motion: reduce) { .lbl.gold, #dPeel.hot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lbl.gold, #dPeel.hot, .lbl.lbl-worker.sel, .lbl.target { animation: none; } }
 #dOpen {
   animation: pulseGlow 2.5s infinite;
 }
@@ -2766,15 +2799,78 @@ function labelText(l) {
   return { html: ic(icon) + '<span class="lbl-txt">' + txt + '</span>' + badge + '<i class="pip ' + pip + '"></i>', key: icon + txt + sub + pip };
 }
 const _v = new THREE.Vector3();
+const workerLabels = new Map();
 function updateLabels(refreshText) {
   const w = innerWidth, h = innerHeight;
+  const hasSelWorker = !!ui.selWorker;
   for (const l of labels) {
     if (l.d.id === 'oven' && false) continue;
-    if (refreshText) { const lt = labelText(l); if (lt.key !== l.last) { l.last = lt.key; l.el.innerHTML = lt.html; } l.el.classList.toggle('sel', !!(sel && sel.kind === l.d.kind && sel.id === l.d.id)); }
+    const isStationOrSpot = l.d.kind === 'station' || l.d.kind === 'spot' || l.d.kind === 'rack';
+    const isIdleStation = l.d.kind === 'station' && workersAt('station', l.d.id).length === 0;
+    if (refreshText) {
+      const lt = labelText(l);
+      if (lt.key !== l.last) { l.last = lt.key; l.el.innerHTML = lt.html; }
+      l.el.classList.toggle('sel', !!(sel && sel.kind === l.d.kind && sel.id === l.d.id));
+    }
+    l.el.classList.toggle('target', hasSelWorker && isStationOrSpot);
+    l.el.classList.toggle('idle-target', hasSelWorker && isIdleStation);
     _v.copy(l.v).project(camera);
     const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15 && G_UI.labelsOn;
     l.el.style.display = vis ? '' : 'none';
     if (vis) l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+  }
+  // sync & update floating worker labels
+  if (S && S.workers && G_UI.labelsOn) {
+    const host = $('labels');
+    for (const [id, wl] of workerLabels) {
+      if (!S.workers.some(x => x.id === id)) {
+        if (wl.el.parentNode) wl.el.parentNode.removeChild(wl.el);
+        workerLabels.delete(id);
+      }
+    }
+    for (let i = 0; i < S.workers.length; i++) {
+      const wk = S.workers[i];
+      let wl = workerLabels.get(wk.id);
+      if (!wl && host) {
+        const b = document.createElement('button');
+        b.className = 'lbl lbl-worker';
+        b.dataset.kind = 'worker';
+        b.dataset.id = String(wk.id);
+        b.type = 'button';
+        b.setAttribute('aria-label', wk.name);
+        b.addEventListener('click', e => {
+          e.stopPropagation();
+          UI.select('worker', wk.id);
+        });
+        host.appendChild(b);
+        wl = { el: b, id: wk.id, last: '', wasSel: false };
+        workerLabels.set(wk.id, wl);
+      }
+      if (wl) {
+        const a = agents.get(wk.id);
+        if (a) {
+          _v.set(a.x, standY(a.x, a.z) + 1.85, a.z).project(camera);
+          const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15;
+          wl.el.style.display = vis ? '' : 'none';
+          if (vis) wl.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+          const isSel = ui.selWorker === wk.id;
+          wl.el.classList.toggle('sel', isSel);
+          wl.el.setAttribute('aria-pressed', isSel ? 'true' : 'false');
+          wl.el.setAttribute('data-selected', isSel ? 'true' : 'false');
+          if (refreshText || isSel !== wl.wasSel) {
+            wl.wasSel = isSel;
+            const badge = isSel ? t('selected') : (wk.assign ? '' : t('idle'));
+            const key = wk.name + ':' + badge + ':' + isSel;
+            if (key !== wl.last) {
+              wl.last = key;
+              wl.el.innerHTML = ic('people') + '<span class="lbl-txt">' + wk.name + '</span>' + (badge ? '<span class="lbl-badge">' + badge + '</span>' : '');
+            }
+          }
+        }
+      }
+    }
+  } else {
+    for (const wl of workerLabels.values()) wl.el.style.display = 'none';
   }
 }
 const G_UI = { labelsOn: true };
@@ -2832,7 +2928,18 @@ function updateScenery(vdt) {
   }
   world.parts.sign.visible = true;
   const ring = world.parts.ring;
-  if (sel) {
+  if (ui.selWorker) {
+    const a = agents.get(ui.selWorker);
+    if (a) {
+      ring.visible = true;
+      const y = standY(a.x, a.z) + 0.03;
+      ring.position.set(a.x, y, a.z);
+      const s = 0.95;
+      ring.scale.set(s * (1 + 0.08 * Math.sin(simTime * 8)), 1, s * (1 + 0.08 * Math.sin(simTime * 8)));
+      ring.material.color.setHex(0xFFD470);
+    } else ring.visible = false;
+  } else if (sel) {
+    ring.material.color.setHex(0xFFC46B);
     let p = null, s = 1.6;
     if (sel.kind === 'station') { p = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; s = sel.id === 'oven' ? 2.4 : 1.7; }
     else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; p = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; s = sel.id === 'shop' ? 2.3 : 1.5; }
@@ -2894,7 +3001,13 @@ function initInput(canvas) {
     canvas.style.cursor = '';
     if (gesture.mode === 'worker') {
       if (gesture.moved && drag) { const hit = pickProxy(e.clientX, e.clientY); UI.dropWorker(gesture.w.id, hit); drag = null; }
-      else if (!gesture.moved) UI.select('worker', gesture.w.id);
+      else if (!gesture.moved) {
+        if (ui.selWorker && ui.selWorker !== gesture.w.id) {
+          const hit = pickProxy(e.clientX, e.clientY);
+          if (hit && (hit.kind === 'station' || hit.kind === 'spot')) UI.select(hit.kind, hit.id);
+          else UI.select('worker', gesture.w.id);
+        } else UI.select('worker', gesture.w.id);
+      }
     } else if (gesture.mode === 'pan' && !gesture.moved) {
       const hit = pickProxy(e.clientX, e.clientY);
       if (hit) UI.select(hit.kind, hit.id); else UI.select(null);
@@ -3103,7 +3216,10 @@ addTX({
   tst_burnt: ['Pişen ürün yandı!', 'A tray burnt!'], tst_delivery: ['Tedarikçi geldi: {0} × {1}', 'Supplier van arrived: {0} × {1}'], tst_cok: ['Sözleşme tamam: +{0}', 'Contract delivered: +{0}'], tst_cfail: ['Sözleşme tutmadı: -{0}, itibar düştü', 'Contract missed: -{0}, reputation drops'],
   tst_skill: ['{0} yeni bir beceri seviyesine ulaştı', '{0} reached a new skill level'], tst_out: ['{0} bitti: {1} duruyor', 'Out of {0}: {1} stopped'], tst_hire: ['{0} ekibe katıldı', '{0} joined the team'], tst_upg: ['Yükseltme tamam', 'Upgrade done'],
   tst_open: ['Dükkân açıldı', 'The shop is open'], tst_full: ['Raflar dolu: fırın bekliyor', 'Racks are full: the oven waits'], tst_ordered: ['Sipariş verildi', 'Order placed'], tst_assigned: ['{0} → {1}', '{0} → {1}'], tst_saved: ['Kaydedildi', 'Saved'], tst_wxmod: ['{0}', '{0}'], tst_restock: ['Fırında işçi yok', 'No worker at the oven'],
-  hint: ['Sürükle: kaydır · Tekerlek: yakınlaştır · İşçiyi tezgâha ya da sokak noktasına sürükle', 'Drag: pan · Wheel: zoom · Drag a worker onto a station or street spot'],
+  tst_worker_sel: ['{0} seçildi: istasyona veya noktaya dokun', '{0} selected: tap a station or spot to assign'],
+  hint: ['Sürükle ya da dokun-ata: işçiyi tezgâha veya sokak noktasına ata · Tekerlek / kıstır: yakınlaştır', 'Drag or tap-to-assign: assign worker to a station or street spot · Wheel / pinch: zoom'],
+  selected: ['Seçildi', 'Selected'], assign_to: ['İstasyon ata', 'Assign to station'], idle_st: ['Boş', 'Idle'],
+  tap_hint_side: ['Sahnede bir istasyona dokunarak veya yukarıdan seçerek atayabilirsin.', 'Tap a station in the scene or select above to assign.'],
   footer: ['Claude Game Arena · built by Claude Sonnet 5.5', 'Claude Game Arena · built by Claude Sonnet 5.5'],
   mus_on: ['Müzik açık', 'Music on'], mus_off: ['Müzik kapalı', 'Music off'], sfx_on: ['Efektler açık', 'Effects on'], sfx_off: ['Efektler kapalı', 'Effects off'],
   confirm_restart: ['Yeniden başlansın mı? Mevcut gün kaybolur.', 'Restart? The current run is lost.'],
@@ -3241,6 +3357,18 @@ function renderSide(force) {
   if (ui.selWorker) {
     const w = S.workers.find(x => x.id === ui.selWorker); if (!w) { ui.selWorker = 0; return renderSide(); }
     h = '<div class="row"><h2>' + ic('people') + ' ' + wName(w) + '</h2>' + closeBtn + '</div><div class="sub">' + t('worker_card') + '</div>' + workerRow(w, true);
+    h += '<h3>' + t('assign_to') + '</h3><div class="row wrap" style="margin-top:6px">';
+    for (const st of [...STATION_IDS, 'oven']) {
+      const isCur = w.assign && w.assign.k === 'station' && w.assign.id === st;
+      const cnt = workersAt('station', st).length;
+      h += btn('toStation', w.id, st, ic(st === 'oven' ? 'oven' : 'dough') + t('st_' + st) + (cnt ? ' (' + cnt + ')' : ' · ' + t('idle_st')), isCur ? 'on' : '');
+    }
+    for (const sp of SELL_SPOTS) {
+      const isCur = w.assign && w.assign.k === 'spot' && w.assign.id === sp;
+      h += btn('toSpot', w.id, sp, ic(SPOT_ICON[sp]) + t('sp_' + sp), isCur ? 'on' : '');
+    }
+    h += btn('recallW', w.id, '', ic('close') + t('idle'), !w.assign ? 'on' : '');
+    h += '</div><div class="muted" style="margin-top:6px">' + t('tap_hint_side') + '</div>';
   } else if (sel.kind === 'station') {
     const id = sel.id, isOven = id === 'oven', sn = isOven ? S.oven : S.stn[id], ws = workersAt('station', id), idle = S.workers.filter(w => !w.assign);
     const flag = isOven ? (sn.flag === 'full' ? t('fl_full') : t('fl_ok')) : sn.flag === 'noing' ? t('fl_noing', t('i_' + (sn.ing || 'flour'))) : t('fl_' + sn.flag);
@@ -3438,10 +3566,34 @@ function onAssignSelect(wid, val) {
 }
 const UI = {
   select(kind, id) {
-    if (kind === 'worker') { ui.selWorker = id; sel = null; }
-    else if (!kind) { sel = null; ui.selWorker = 0; }
-    else { sel = { kind, id }; ui.selWorker = 0; }
-    SFX.click(); renderSide(true); updateLabels(true);
+    if (kind === 'worker') {
+      const wid = +id;
+      if (ui.selWorker === wid) {
+        ui.selWorker = 0; // tap selected worker again to deselect
+      } else {
+        ui.selWorker = wid;
+        const w = S.workers.find(x => x.id === wid);
+        if (w) toast(t('tst_worker_sel', w.name), 'info', 'people');
+      }
+      sel = null;
+    } else if (!kind) {
+      sel = null;
+      ui.selWorker = 0;
+    } else {
+      // station, spot, or rack target
+      if (ui.selWorker) {
+        // Two-tap worker assignment fallback: tap worker to select, tap station/spot to assign
+        const wid = ui.selWorker;
+        ui.selWorker = 0;
+        UI.dropWorker(wid, { kind, id });
+        return;
+      }
+      sel = { kind, id };
+      ui.selWorker = 0;
+    }
+    SFX.click();
+    renderSide(true);
+    updateLabels(true);
     if (sel && sel.kind === 'spot' && coarse) ui.salesOpen = false;
   },
   dropWorker(wid, hit) {
@@ -3580,6 +3732,8 @@ setLoad(0);
 function resetVisual() {
   crowd.forEach((c, i) => { if (i >= 16) c.on = false; }); agents.clear(); van.t = -1; if (world.parts.van) world.parts.van.visible = false;
   sel = null; ui.selWorker = 0; hoverKey = '';
+  for (const wl of workerLabels.values()) { if (wl.el.parentNode) wl.el.parentNode.removeChild(wl.el); }
+  workerLabels.clear();
 }
 function hideOverlays() { for (const id of ['planM', 'summary', 'endM', 'pause', 'settings']) show$(id, false); ui.planOpen = false; ui.paused = false; ui.endShown = false; }
 function enterGame() {
@@ -3673,7 +3827,7 @@ function fastForward(sec) {
 function stateSummary() { return { phase: S.phase, day: S.day, t: +S.t.toFixed(1), lira: Math.round(S.lira), rep: +S.rep.toFixed(2), result: S.result, workers: S.workers.length }; }
 window.simitfiriniSim = fastForward;
 window.simitfirini = {
-  get S() { return S; }, DATA, FLAGS, assets: assetsInfo, ui, get result() { return S && S.result; }, get finished() { return ui.finished; }, stateSummary,
+  get S() { return S; }, DATA, FLAGS, assets: assetsInfo, ui, get UI() { return UI; }, get result() { return S && S.result; }, get finished() { return ui.finished; }, stateSummary,
   get cam() { return cam; }, get fps() { return Math.round(fpsEma); }, get calls() { return renderer ? renderer.info.render.calls : 0; }, get tris() { return renderer ? renderer.info.render.triangles : 0; },
   get errors() { return window.__errors; }, get missingText() { return window.__missing || []; }, bot: botPlan,
   get reducedMotion() { return RM; },
