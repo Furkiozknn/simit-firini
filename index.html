@@ -510,6 +510,67 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
+/* Guided First-Day Tutorial Overlay */
+.tut-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 38;
+}
+.tut-overlay.hidden { display: none !important; }
+.tut-highlight {
+  position: fixed;
+  border-radius: 10px;
+  pointer-events: none;
+  border: 2px solid var(--gold-hi);
+  box-shadow:
+    0 0 0 9999px rgba(12, 6, 2, 0.65),
+    0 0 18px rgba(243, 186, 66, 0.8),
+    inset 0 0 10px rgba(243, 186, 66, 0.35);
+  transition: top .15s ease-out, left .15s ease-out, width .15s ease-out, height .15s ease-out;
+  animation: tutPulse 1.8s ease-in-out infinite alternate;
+  z-index: 38;
+}
+@keyframes tutPulse {
+  0% { border-color: var(--gold); box-shadow: 0 0 0 9999px rgba(12, 6, 2, 0.65), 0 0 14px rgba(243, 186, 66, 0.65); }
+  100% { border-color: #FFF2C2; box-shadow: 0 0 0 9999px rgba(12, 6, 2, 0.65), 0 0 24px rgba(255, 212, 112, 0.95), inset 0 0 8px rgba(255, 212, 112, 0.4); }
+}
+.tut-card {
+  position: fixed;
+  pointer-events: auto;
+  z-index: 39;
+  padding: 14px 16px;
+  border-radius: 12px;
+  width: min(320px, calc(100vw - 24px));
+  background: linear-gradient(180deg, rgba(28, 17, 12, 0.97) 0%, rgba(16, 10, 7, 0.99) 100%);
+  border: 1.5px solid var(--gold);
+  border-bottom: 3px solid var(--iznik);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 12px 32px rgba(0, 0, 0, 0.75);
+  color: var(--ink);
+  transition: transform .18s ease-out, opacity .18s ease-out;
+}
+.tut-step-badge {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--gold-hi); background: rgba(243, 186, 66, 0.18);
+  border: 1px solid rgba(243, 186, 66, 0.4); padding: 2px 8px; border-radius: 99px;
+}
+.tut-title {
+  margin: 6px 0 4px; font-family: var(--display); font-weight: 700; font-size: 16.5px;
+  color: var(--gold-hi); line-height: 1.25;
+}
+.tut-desc {
+  margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-dim); font-weight: 500;
+}
+.tut-skip-btn {
+  background: transparent; border: none; color: var(--ink-mute); font-size: 12px;
+  font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.tut-skip-btn:hover { color: var(--ink); background: rgba(255, 255, 255, 0.08); }
+@media (prefers-reduced-motion: reduce) {
+  .tut-highlight { animation: none; transition: none; }
+  .tut-card { transition: none; }
+}
+
 /* =============================================================================================
    SCREENS & MODALS: Title, Day Plan, Summary, Settings
    ============================================================================================= */
@@ -718,6 +779,23 @@ table.t td {
 </div>
 <div id="hint" class="glass hidden"></div>
 <div id="footer"></div>
+
+<!-- Guided First-Day Tutorial Overlay -->
+<div id="tutOverlay" class="tut-overlay hidden" role="region" aria-label="Tutorial">
+  <div id="tutHighlight" class="tut-highlight"></div>
+  <div id="tutCard" class="tut-card" role="dialog" aria-labelledby="tutTitle">
+    <div class="row sp" style="margin-bottom:4px">
+      <span class="tut-step-badge" id="tutStepBadge">1/5</span>
+      <button class="tut-skip-btn" id="tutSkip" type="button"></button>
+    </div>
+    <h3 id="tutTitle" class="tut-title"></h3>
+    <p id="tutDesc" class="tut-desc"></p>
+    <div class="row sp" style="margin-top:10px">
+      <span class="muted" style="font-size:12px" id="tutSubTip"></span>
+      <button class="btn primary sm" id="tutNext" type="button"></button>
+    </div>
+  </div>
+</div>
 
 <!-- title -->
 <div id="title" class="screen">
@@ -1204,7 +1282,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage unavailable */ } },
 };
-const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best', daily: 'arena.simitfirini.daily' };
+const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best', daily: 'arena.simitfirini.daily', tutDone: 'arena.simitfirini.tutDone' };
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
 // reduced motion: the OS setting, or the arena-kit accessibility panel when it is present (it starts from the OS setting)
 let RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
@@ -3323,6 +3401,25 @@ addTX({
   sum_gold: ['Altın pişme', 'Golden bakes'], sum_quality: ['Mayalanma: ideal %{0} · ağır {1} · çökük {2}', 'Proofing: {0}% ideal · {1} dense · {2} collapsed'],
   tip_over: ['Hamurun çoğu çöktü: dinlendirmeyi kısalt ya da fırına ikinci işçi koy.', 'Much of the dough collapsed: shorten the rest or put a second baker on the oven.'],
   tip_under: ['Hamur az mayalandı: soğukta dinlendirmeyi uzat.', 'The dough was under-proofed: rest it longer in the cold.'],
+  tut_next: ['İleri', 'Next'],
+  tut_finish: ['Tamamla', 'Finish'],
+  tut_skip: ['Atla', 'Skip'],
+  tut_tip_order: ['+20 un al veya İleri\'ye bas', 'Order +20 flour or press Next'],
+  tut_tip_open: ['Dükkânı aç veya İleri\'ye bas', 'Open the shop or press Next'],
+  tut_tip_knead: ['Yoğurmaya tıkla veya İleri\'ye bas', 'Click knead or press Next'],
+  tut_tip_worker: ['Çırağa dokun veya İleri\'ye bas', 'Tap apprentice or press Next'],
+  tut_tip_oven: ['Fırına dokun veya Tamamla\'ya bas', 'Tap oven or press Finish'],
+  tut_step1_t: ['1. Malzeme Tedariği: Un Siparişi', '1. Supply: Order Flour'],
+  tut_step1_d: ['Simit üretimi un ile başlar. Buradan un sipariş ederek yoğurma stoğunu hazırla.', 'Simit production starts with flour. Order flour here to keep kneading stocked.'],
+  tut_step2_t: ['2. Fırını ve Dükkânı Aç', '2. Open the Bakery'],
+  tut_step2_d: ['Tedarik tamam! Dükkânı açarak fırını çalıştır ve günü başlat.', 'Supplies ready! Open the shop to start production and welcome buyers.'],
+  tut_step3_t: ['3. Yoğurma Tezgâhı', '3. Kneading Station'],
+  tut_step3_d: ['Un ve su burada yoğrulur. Hamur sırayla şekil verme, pekmez ve susama geçer.', 'Flour and water are kneaded here, then shaped, dipped in molasses, and rolled in sesame.'],
+  tut_step4_t: ['4. Çırak / İşçi Seçimi', '4. Select an Apprentice'],
+  tut_step4_d: ['Fırındaki çırağa dokunarak onu seç. Seçilen çırağa yeni görev verebilirsin.', 'Tap or click an apprentice to select them and give them a task.'],
+  tut_step5_t: ['5. Görev Atama (Fırın)', '5. Assign Worker (Oven)'],
+  tut_step5_d: ['Çırağını fırına atayarak pişen simitlerin yanmasını önle ve tepsileri vaktinde çıkar!', 'Assign your worker to the oven to pull hot simit on time and prevent burning!'],
+  tut_finished: ['Eğitim tamamlandı! İyi çalışmalar usta.', 'Tutorial completed! Happy baking, master.'],
 });
 
 // =============================================================================================
@@ -3402,6 +3499,7 @@ function applyLang() {
   if (!ui.loadDone) $('loadmsg').textContent = t('loading', ui.loadN || 0, 2);
   renderSettings(); if (ui.inGame) { hudUpdate(true); renderSide(true); renderSales(true); if (ui.planOpen) renderPlan(); }
   updateLabels(true);
+  if (tutActive) updateTutText();
 }
 function showBest() {
   const b = store.get(KEY.best);
@@ -3615,12 +3713,12 @@ function handleAct(name, a, b) {
     case 'price': setPrice(a, S.sell[a] + +b); SFX.click(); break;
     case 'target': setTarget(a, S.target[a] + +b); SFX.click(); break;
     case 'recipe': if (tryResult(act('recipe', a), SFX.good)) { toast(t('p_' + a) + ' ✓', 'good'); } break;
-    case 'order': if (tryResult(order(a, +b))) toast(t('tst_ordered'), 'info', 'van'); break;
-    case 'stockup': { const before = S.lira; botOrders(0.9); if (S.lira < before) { SFX.buy(); toast(t('tst_ordered'), 'info', 'van'); } else SFX.bad(); break; }
+    case 'order': if (tryResult(order(a, +b))) { toast(t('tst_ordered'), 'info', 'van'); if (tutActive && tutStep === 1) tutNext(); } break;
+    case 'stockup': { const before = S.lira; botOrders(0.9); if (S.lira < before) { SFX.buy(); toast(t('tst_ordered'), 'info', 'van'); if (tutActive && tutStep === 1) tutNext(); } else SFX.bad(); break; }
     case 'sendSpot': { const w = S.workers.find(x => !x.assign); if (w) tryResult(assign(w.id, 'spot', a)); break; }
     case 'recallSpot': { const l = sellersAt(a); if (l.length) assign(l[l.length - 1].id, 'none'); SFX.click(); break; }
-    case 'toSpot': tryResult(assign(+a, 'spot', b)); break;
-    case 'toStation': tryResult(assign(+a, 'station', b)); break;
+    case 'toSpot': tryResult(assign(+a, 'spot', b)); if (tutActive && tutStep === 5) tutComplete(); break;
+    case 'toStation': tryResult(assign(+a, 'station', b)); if (tutActive && tutStep === 5) tutComplete(); break;
     case 'recallW': assign(+a, 'none'); SFX.click(); break;
     case 'fire': tryResult(act('fire', +a)); break;
     case 'hire': if (tryResult(act('hire', +a), SFX.good)) { const w = S.workers[S.workers.length - 1]; toast(t('tst_hire', w.name), 'good', 'people'); } break;
@@ -3630,7 +3728,7 @@ function handleAct(name, a, b) {
     case 'peel': { const r = a === '' || a === undefined ? peelAll() : peel(+a); if (!r.ok) { toast(whyMsg(r.why), 'bad', 'flame'); SFX.bad(); } break; }
     case 'plan': openPlan(); return;
     case 'planclose': closePlan(); return;
-    case 'open': beginDay(); return;
+    case 'open': beginDay(); if (tutActive && tutStep === 2) tutNext(); return;
     case 'sales': ui.salesOpen = !ui.salesOpen; SFX.click(); break;
     case 'deselect': UI.select(null); return;
     case 'focusSpot': UI.select('spot', a); return;
@@ -3658,6 +3756,7 @@ const UI = {
         const w = S.workers.find(x => x.id === wid);
         if (w) toast(t('tst_worker_sel', w.name), 'info', 'people');
       }
+      if (tutActive && tutStep === 4) tutNext();
       sel = null;
     } else if (!kind) {
       sel = null;
@@ -3673,6 +3772,7 @@ const UI = {
       }
       sel = { kind, id };
       ui.selWorker = 0;
+      if (tutActive && tutStep === 3 && kind === 'station' && id === 'knead') tutNext();
     }
     SFX.click();
     renderSide(true);
@@ -3687,6 +3787,7 @@ const UI = {
     else if (hit.kind === 'spot') r = hit.id === 'shop' ? assign(wid, 'none') : assign(wid, 'spot', hit.id);
     else if (hit.kind === 'rack') r = assign(wid, 'none');
     if (r) { if (tryResult(r)) toast(t('tst_assigned', w.name, hit.id === 'racks' ? t('idle') : hit.kind === 'station' ? t('st_' + hit.id) : t('sp_' + hit.id)), 'info', 'people'); }
+    if (tutActive && tutStep === 5) tutComplete();
     afterChange();
   },
 };
@@ -3724,6 +3825,150 @@ function applyQuality() {
 }
 function setLang(l) { settings.lang = l; saveSettings(); applyLang(); }
 function toggleFs() { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { /* unsupported */ } }
+
+// ---------- guided tutorial (first-day 5-step overlay) ----------
+let tutActive = false, tutStep = 0;
+function isTutDone() {
+  try {
+    return localStorage.getItem('tutDone') === '1' || localStorage.getItem('arena.simitfirini.tutDone') === '1' || !!store.get(KEY.tutDone);
+  } catch (e) { return false; }
+}
+function setTutDone() {
+  try {
+    localStorage.setItem('tutDone', '1');
+    localStorage.setItem('arena.simitfirini.tutDone', '1');
+  } catch (e) {}
+  store.set(KEY.tutDone, 1);
+}
+function tutStart() {
+  if (FLAGS.auto || FLAGS.sim || isTutDone() || !S || S.day !== 1) return;
+  tutActive = true;
+  tutGo(1);
+}
+function tutDismiss(markDone) {
+  tutActive = false;
+  tutStep = 0;
+  show$('tutOverlay', false);
+  if (markDone) setTutDone();
+}
+function tutComplete() {
+  tutDismiss(true);
+  toast(t('tut_finished'), 'good', 'check');
+}
+function getTutTarget(step) {
+  if (step === 1) {
+    const ob = document.querySelector('#plBody button[data-act="order"][data-a="flour"]');
+    if (ob) return ob.closest('.stepper') || ob;
+    return document.querySelector('#plBody button[data-act="tab"][data-a="supply"]')
+      || $('dPlan');
+  }
+  if (step === 2) {
+    return document.querySelector('#plBody button[data-act="open"]')
+      || $('dOpen')
+      || $('dPlan');
+  }
+  if (step === 3) {
+    return document.querySelector('#labels [data-kind="station"][data-id="knead"]');
+  }
+  if (step === 4) {
+    return document.querySelector('#labels [data-kind="worker"]')
+      || document.querySelector('.lbl-worker');
+  }
+  if (step === 5) {
+    return document.querySelector('#labels [data-kind="station"][data-id="oven"]');
+  }
+  return null;
+}
+function tutGo(step) {
+  if (!tutActive) return;
+  if (step > 5) {
+    tutComplete();
+    return;
+  }
+  tutStep = step;
+  show$('tutOverlay', true);
+  $('tutOverlay').setAttribute('data-step', String(step));
+  $('tutHighlight').setAttribute('data-step', String(step));
+  if (step === 1 && ui.planOpen && ui.planTab !== 'supply') {
+    ui.planTab = 'supply';
+    renderPlan();
+  }
+  updateTutText();
+  updateTutPosition();
+}
+function tutNext() {
+  if (!tutActive) return;
+  tutGo(tutStep + 1);
+}
+function updateTutText() {
+  if (!tutActive || tutStep < 1 || tutStep > 5) return;
+  $('tutStepBadge').textContent = tutStep + '/5';
+  $('tutSkip').textContent = t('tut_skip');
+  $('tutNext').textContent = tutStep === 5 ? t('tut_finish') : t('tut_next');
+  $('tutTitle').textContent = t('tut_step' + tutStep + '_t');
+  $('tutDesc').textContent = t('tut_step' + tutStep + '_d');
+  const subTips = [
+    '',
+    t('tut_tip_order'),
+    t('tut_tip_open'),
+    t('tut_tip_knead'),
+    t('tut_tip_worker'),
+    t('tut_tip_oven'),
+  ];
+  $('tutSubTip').textContent = subTips[tutStep] || '';
+}
+function updateTutPosition() {
+  if (!tutActive) return;
+  const target = getTutTarget(tutStep);
+  const hl = $('tutHighlight');
+  const card = $('tutCard');
+  if (!target) {
+    hl.style.display = 'none';
+    return;
+  }
+  const rect = target.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    hl.style.display = 'none';
+    return;
+  }
+  const pad = 6;
+  hl.style.display = 'block';
+  hl.style.top = Math.max(0, rect.top - pad) + 'px';
+  hl.style.left = Math.max(0, rect.left - pad) + 'px';
+  hl.style.width = (rect.width + pad * 2) + 'px';
+  hl.style.height = (rect.height + pad * 2) + 'px';
+
+  const cardW = Math.min(320, window.innerWidth - 24);
+  let top = rect.bottom + 14;
+  let left = rect.left + (rect.width / 2) - (cardW / 2);
+  if (top + 160 > window.innerHeight) {
+    top = Math.max(12, rect.top - 170);
+  }
+  left = Math.max(12, Math.min(window.innerWidth - cardW - 12, left));
+  card.style.top = top + 'px';
+  card.style.left = left + 'px';
+}
+function initTutListeners() {
+  $('tutNext').addEventListener('click', () => {
+    if (tutStep === 1) {
+      tutNext();
+    } else if (tutStep === 2) {
+      if (ui.planOpen) beginDay();
+      tutNext();
+    } else if (tutStep === 3) {
+      tutNext();
+    } else if (tutStep === 4) {
+      if (S && S.workers && S.workers[0]) UI.select('worker', S.workers[0].id);
+      tutNext();
+    } else if (tutStep === 5) {
+      if (ui.selWorker) UI.dropWorker(ui.selWorker, { kind: 'station', id: 'oven' });
+      tutComplete();
+    }
+  });
+  $('tutSkip').addEventListener('click', () => {
+    tutComplete();
+  });
+}
 
 // ---------- summary + end ----------
 function showSummary(L) {
@@ -3830,6 +4075,7 @@ function startNew() {
   audioInit(); audioResume(); musicStart();
   newGame(FLAGS.seed || ((Date.now() % 90000) + 7)); enterGame(); saveGame();
   if (!FLAGS.auto) openPlan();
+  if (!FLAGS.auto && S.day === 1 && !isTutDone()) tutStart();
 }
 function continueGame() {
   audioInit(); audioResume(); musicStart();
@@ -3839,9 +4085,11 @@ function continueGame() {
 function resumeRun(sv) {
   audioInit(); audioResume(); musicStart();
   loadState(sv.S); fixOvens(); enterGame(); if (S.phase === 'day') S.phase = 'plan'; if (S.phase === 'plan') openPlan(); else if (S.phase === 'summary') nextDay();
+  if (!FLAGS.auto && S.day === 1 && !isTutDone()) tutStart();
   afterChange();
 }
 function toTitle() {
+  tutDismiss(false);
   ui.inGame = false; hideOverlays(); show$('hud', false); show$('dock', false); show$('side', false); show$('sales', false); show$('hint', false); show$('title');
   G_UI.labelsOn = false; updateLabels(false); newGame(7); S.phase = 'plan'; resetVisual(); applyLang(); focusFirst('title');
 }
@@ -3915,6 +4163,15 @@ window.simitfirini = {
   get cam() { return cam; }, get fps() { return Math.round(fpsEma); }, get calls() { return renderer ? renderer.info.render.calls : 0; }, get tris() { return renderer ? renderer.info.render.triangles : 0; },
   get errors() { return window.__errors; }, get missingText() { return window.__missing || []; }, bot: botPlan,
   get reducedMotion() { return RM; },
+  tut: {
+    get active() { return tutActive; },
+    get step() { return tutStep; },
+    get isDone() { return isTutDone(); },
+    start: tutStart,
+    next: tutNext,
+    complete: tutComplete,
+    dismiss: tutDismiss,
+  },
 };
 
 // ---------- input ----------
@@ -3967,7 +4224,7 @@ window.addEventListener('keydown', e => {
 function resizeHudVar() { const h = $('hud').offsetHeight || 56; document.documentElement.style.setProperty('--hudH', h + 8 + 'px'); }
 // the HUD wraps to more rows on narrow screens and its chips change text, so follow its height
 if (window.ResizeObserver) new ResizeObserver(() => { if (ui.inGame) resizeHudVar(); }).observe($('hud'));
-window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); });
+window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); if (tutActive) updateTutPosition(); });
 // hidden tab: the pause menu opens during the day (as before) and the audio stops, following the arena-kit
 // "pause when the tab is hidden" setting; on return the pause menu stays open until the player resumes
 const autoPause = () => { if (ui.inGame && S.phase === 'day' && !ui.paused) setPaused(true); };
@@ -3986,6 +4243,7 @@ function frame(now) {
   if (ui.inGame && FLAGS.auto && !ui.paused) autoDrive();
   if (running) { let rem = dtReal * ui.speed; while (rem > 1e-6 && S.phase === 'day') { const d = Math.min(rem, 0.1); step(d); rem -= d; } watchProblems(); }
   goldCue();
+  if (tutActive) updateTutPosition();
   const vdt = ui.paused || (ui.inGame && modalBlocking() && !open$('title')) ? 0 : (running ? dtReal * Math.min(ui.speed, 2) : (ui.inGame ? dtReal : dtReal));
   if (!ui.inGame) { titleAng += dtReal; cam.az = 0.62 + Math.sin(titleAng * 0.12) * 0.12; placeCamera(); }
   updateScenery(vdt);
@@ -4009,6 +4267,7 @@ function boot() {
   setLoad(1);
   if (FLAGS.low) settings.quality = 'low';
   initWorld($('c')); initInput($('c')); initCrowd(); initLabels(); resizeRenderer(); fitCamera();
+  initTutListeners();
   newGame(7); S.phase = 'plan';
   applyLang(); ui.loadDone = true; $('loadmsg').textContent = ''; $('bPlay').disabled = false; $('bDaily').disabled = false; $('bPlay').focus();
   if (FLAGS.shot) { /* reserved for screenshot helpers */ }
@@ -4018,6 +4277,7 @@ function boot() {
     if (FLAGS.sim) { if (!FLAGS.auto) { botOrders(0.9); closePlan(); startDay(); } fastForward(FLAGS.sim); }
   }
   updateLabels(true);
+  if (tutActive) updateTutText();
 }
 boot();
 
