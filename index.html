@@ -38,26 +38,6 @@ window.__bootTimer = setTimeout(function () { var m = document.getElementById('l
 window.addEventListener('unhandledrejection', function (e) { window.__errors.push('promise: ' + String(e.reason && e.reason.message || e.reason)); });
 </script>
 <style>
-/* Floating Currency + Oven Pulse Keyframes */
-@keyframes floatCurrency {
-  0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
-  100% { opacity: 0; transform: translate(-50%, -46px) scale(1.15); }
-}
-.float-currency {
-  position: fixed; z-index: 100; pointer-events: none;
-  font-family: var(--font); font-weight: 800; font-size: 16px; color: var(--gold-hi);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-  animation: floatCurrency 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes ovenPulseRed {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(224, 83, 22, 0.5)); color: var(--accent); }
-  50% { filter: drop-shadow(0 0 10px rgba(255, 60, 20, 0.95)); color: #FF3300; transform: scale(1.12); }
-}
-.oven-alarm {
-  animation: ovenPulseRed 0.8s ease-in-out infinite alternate !important;
-}
-
 /* =============================================================================================
    SİMİT FIRINI — RADICAL UI/UX IDENTITY REBIRTH
    Theme: Taş Fırın & Boğaziçi Zanaatı (Artisan Stone Oven & Bosphorus Heritage)
@@ -230,7 +210,7 @@ svg.arrow { width: 12px; height: 12px; }
 #hud {
   position: fixed; top: 8px; left: 8px; right: 8px; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 6px 12px 9px 12px; flex-wrap: nowrap;
+  padding: 6px 12px 9px 12px; flex-wrap: wrap; row-gap: 6px; /* wraps instead of overlapping when it does not fit */
 }
 #hud .brand {
   display: flex; align-items: center; gap: 8px;
@@ -241,7 +221,7 @@ svg.arrow { width: 12px; height: 12px; }
 #hud .brand svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
 #hud .stats {
   display: flex; gap: 6px; align-items: center; justify-content: center;
-  flex: 1; min-width: 0; flex-wrap: nowrap;
+  flex: 1; min-width: auto; flex-wrap: wrap;
 }
 
 /* Status Metric Chips */
@@ -262,7 +242,7 @@ svg.arrow { width: 12px; height: 12px; }
 .stars { display: inline-flex; gap: 2px; align-items: center; }
 .stars svg { width: 17px; height: 17px; }
 
-#hud .tools { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+#hud .tools { display: flex; gap: 6px; align-items: center; flex-shrink: 0; margin-left: auto; }
 .seg {
   display: inline-flex; background: rgba(0, 0, 0, 0.38);
   border: 1.5px solid rgba(243, 186, 66, 0.22);
@@ -604,13 +584,37 @@ table.t td {
   #dock { bottom: 18px; }
 }
 
+/* narrower than one full row: logo + controls on top, status chips on a row of their own below */
+@media (max-width: 1240px) {
+  #hud .tools { order: 1; }
+  #hud .stats { order: 2; flex: 1 1 100%; }
+}
+
 @media (max-width: 680px) {
-  #hud { padding: 4px 8px 7px 8px; }
+  #hud { left: 6px; right: 6px; padding: 4px 6px 7px 6px; }
+  /* phones: the controls take the whole top row, logo and chips share the rows below */
+  #hud .tools { flex: 1 1 100%; justify-content: space-between; gap: 4px; }
+  #hud .brand { order: 2; }
+  #hud .stats { order: 3; flex: 1 1 0; gap: 4px; }
+  .seg { padding: 0; gap: 0; }
   #hud .brand svg { width: 28px; height: 28px; }
   .chip { height: 34px; padding: 0 8px; font-size: 13px; }
   .chip svg { width: 16px; height: 16px; }
   .seg .btn { min-height: 32px; padding: 0 8px; font-size: 12.5px; }
   #hud .btn.icon { width: 36px; min-height: 36px; }
+}
+/* phones: the dock spans the screen and its 2-3 buttons share it (3bcebe6's 110 px minimum made it wider than 360 px) */
+@media (max-width: 680px) {
+  #dock { left: 8px; right: 8px; transform: none; justify-content: center; gap: 6px; padding: 6px; }
+  #dock .btn { flex: 1 1 0; min-width: 0; max-width: 190px; min-height: 46px; padding: 4px 8px; gap: 6px; font-size: 14px; line-height: 1.15; white-space: normal; text-align: center; }
+  #dock .btn svg { flex: none; }
+}
+/* very narrow phones: the logo would push the chips onto a third row */
+@media (max-width: 400px) { #hud .brand { display: none; } }
+/* touch screens keep 44 px targets on phones too (the rule above would shrink them) */
+@media (max-width: 680px) and (pointer: coarse) {
+  .seg .btn { min-height: 44px; min-width: 44px; }
+  #hud .btn.icon { width: 44px; min-height: 44px; }
 }
 
 @media (max-height: 560px) {
@@ -707,7 +711,7 @@ table.t td {
 <div id="endM" class="screen dim hidden" style="z-index:45"><div class="modal glass" role="dialog" aria-labelledby="enTitle"><div id="enBody"></div></div></div>
 <div id="dbg" class="hidden"></div>
 
-<script>/*ARENA-KIT:BEGIN v1.0.0 sha256:a9b9a8b52b3e*/
+<script>/*ARENA-KIT:BEGIN v1.0.1 sha256:bc575c398c95*/
 /* ARENA-KIT v1 — shared layer for the 21 Claude Game Arena games.
  *
  * Injected inline into each game's index.html (between begin/end marker comments) by
@@ -717,7 +721,8 @@ table.t td {
  *   Arena.perf.attach(renderer)        dynamic pixel ratio for weak GPUs (Intel UHD)
  *   Arena.hint(id, text)               one-time hint toast (first 30 s guidance)
  *   Arena.endCard({...})               end-of-session card: reason, score, "again", another game
- *   Arena.daily(game)                  UTC-day seed + mulberry32 rng + streak
+ *   Arena.daily(game, {dayKey})        UTC-day seed (or the game's own day key) + mulberry32 rng + streak
+ *   Arena.quiet                        true on ?auto / ?nosave / ?demo: nothing is written to localStorage
  *   Arena.share({...})                 Web Share / clipboard text + optional PNG card
  *   Arena.profile(), Arena.award(id)   cross-game passport (shared origin localStorage)
  *   Arena.settings / openSettings()    accessibility panel (text size, contrast, motion, vibration, auto-pause)
@@ -728,7 +733,7 @@ table.t td {
 (function (root) {
   'use strict';
   if (root.Arena && root.Arena.version) return; // injected twice (e.g. iframe) -> keep the first
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
   var hasDOM = typeof document !== 'undefined';
 
   /* ---------- core (pure, Node-testable) ---------- */
@@ -738,6 +743,12 @@ table.t td {
     var d = date || new Date();
     return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
   };
+  core.localDayKey = function (date) { // local-time YYYYMMDD (for games whose own daily turns at local midnight)
+    var d = date || new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  };
+  // Bot / demo / no-save runs must not touch the player's storage: ?auto, ?nosave, ?demo (any value).
+  core.isQuiet = function (search) { return /[?&](auto|nosave|demo)(=|&|$)/.test(search || ''); };
   core.prevDayKey = function (key) {
     var y = Math.floor(key / 10000), m = Math.floor(key / 100) % 100, d = key % 100;
     return core.dayKey(new Date(Date.UTC(y, m - 1, d) - 86400000));
@@ -792,7 +803,9 @@ table.t td {
 
   /* ---------- storage ---------- */
   var mem = {};
-  function store() { try { return root.localStorage; } catch (e) { return null; } }
+  var quiet = false;
+  try { quiet = hasDOM && core.isQuiet(location.search); } catch (e) {}
+  function store() { if (quiet) return null; try { return root.localStorage; } catch (e) { return null; } }
   function get(key, fallback) {
     var s = store(), raw = null;
     try { raw = s ? s.getItem('arena.' + key) : (key in mem ? mem[key] : null); } catch (e) { raw = null; }
@@ -953,11 +966,12 @@ table.t td {
     return close;
   }
 
-  function daily(game) {
+  function daily(game, opts) {
     game = game || gameId;
+    var own = opts && /^\d{8}$/.test(String(opts.dayKey || '')) ? +opts.dayKey : 0;
     var q = null;
     try { q = hasDOM && new URLSearchParams(location.search).get('d'); } catch (e) {}
-    var day = /^\d{8}$/.test(q || '') ? +q : core.dayKey();
+    var day = /^\d{8}$/.test(q || '') ? +q : (own || core.dayKey());
     var seed = core.hash(game + ':' + day);
     var recs = get('daily.v1', {});
     var rec = recs[game] || { last: 0, streak: 0, best: 0 };
@@ -1053,7 +1067,7 @@ table.t td {
   }
 
   root.Arena = {
-    version: VERSION, game: gameId, games: GAMES.slice(), lang: function (l) { if (l) lang = l === 'tr' ? 'tr' : 'en'; return lang; },
+    version: VERSION, quiet: quiet, game: gameId, games: GAMES.slice(), lang: function (l) { if (l) lang = l === 'tr' ? 'tr' : 'en'; return lang; },
     perf: perf, hint: hint, toast: toast, endCard: endCard, daily: daily, share: share, shareCard: shareCard,
     profile: profile, award: award, settings: settings, openSettings: openSettings, mountSettingsButton: mountSettingsButton,
     on: function (name, fn) { (listeners[name] = listeners[name] || []).push(fn); },
@@ -2731,26 +2745,13 @@ function goldCue() {
   if (ovenLabel) ovenLabel.el.classList.toggle('gold', on);
 }
 const SPOT_ICON = { shop: 'shop', pier: 'ferry', school: 'school', park: 'park', office: 'office', tea: 'tea' };
-function spawnFloatCurrency(x, y, amount) {
-  const d = document.createElement('div');
-  d.className = 'float-currency';
-  d.textContent = '+' + money(amount);
-  d.style.left = x + 'px';
-  d.style.top = y + 'px';
-  document.body.appendChild(d);
-  setTimeout(() => d.remove(), 900);
-}
-
 function labelText(l) {
   const { kind, id } = l.d; let pip = 'good', txt = '', icon = '', sub = '';
   if (kind === 'station') {
     const sn = id === 'oven' ? S.oven : S.stn[id], n = workersAt('station', id).length;
     icon = id === 'oven' ? 'oven' : 'dough'; txt = t('st_' + id);
     sub = n > 0 ? n : '0';
-    if (id === 'oven') {
-      const hasUnattended = S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 30));
-      pip = hasUnattended ? 'bad' : (sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn')));
-    }
+    if (id === 'oven') pip = sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn'));
     if (id === 'oven' && S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o))) sub = t('gold_now');
     else pip = sn.flag === 'noing' ? 'bad' : (sn.flag === 'ok' ? (n ? 'good' : 'warn') : 'warn');
   } else if (kind === 'rack') {
@@ -2773,14 +2774,7 @@ function updateLabels(refreshText) {
     _v.copy(l.v).project(camera);
     const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15 && G_UI.labelsOn;
     l.el.style.display = vis ? '' : 'none';
-    if (vis) {
-      l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
-      if (l.d.kind === 'station' && l.d.id === 'oven') {
-        const hasUnattended = S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 30));
-        const iconSvg = l.el.querySelector('svg');
-        if (iconSvg) iconSvg.classList.toggle('oven-alarm', hasUnattended);
-      }
-    }
+    if (vis) l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
   }
 }
 const G_UI = { labelsOn: true };
@@ -2838,16 +2832,13 @@ function updateScenery(vdt) {
   }
   world.parts.sign.visible = true;
   const ring = world.parts.ring;
-  let ringPos = null, ringScale = 1.6;
-  if (ui.selWorker) {
-    const a = agents.get(ui.selWorker);
-    if (a) { ringPos = [a.x, standY(a.x, a.z) + 0.02, a.z]; ringScale = 1.2; }
-  } else if (sel) {
-    if (sel.kind === 'station') { ringPos = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; ringScale = sel.id === 'oven' ? 2.4 : 1.7; }
-    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; ringPos = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; ringScale = sel.id === 'shop' ? 2.3 : 1.5; }
-    else if (sel.kind === 'rack') { ringPos = [-2.0, FLOOR_Y + 0.02, 1.4]; ringScale = 2.8; }
-  }
-  if (ringPos) { ring.visible = true; ring.position.set(ringPos[0], ringPos[1], ringPos[2]); ring.scale.set(ringScale * (1 + 0.04 * Math.sin(simTime * 5)), 1, ringScale * (sel && sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
+  if (sel) {
+    let p = null, s = 1.6;
+    if (sel.kind === 'station') { p = sel.id === 'oven' ? [-8.4, FLOOR_Y + 0.05, S.oven.count > 1 ? 1.2 : -0.6] : [ST3D[sel.id].pos[0], FLOOR_Y + 0.02, ST3D[sel.id].pos[1]]; s = sel.id === 'oven' ? 2.4 : 1.7; }
+    else if (sel.kind === 'spot') { const sp = SPOT3D[sel.id].pos; p = [sp[0], standY(sp[0], sp[1]) + 0.05, sp[1]]; s = sel.id === 'shop' ? 2.3 : 1.5; }
+    else if (sel.kind === 'rack') { p = [-2.0, FLOOR_Y + 0.02, 1.4]; s = 2.8; }
+    if (p) { ring.visible = true; ring.position.set(p[0], p[1], p[2]); ring.scale.set(s * (1 + 0.04 * Math.sin(simTime * 5)), 1, s * (sel.kind === 'rack' ? 0.5 : 1) * (1 + 0.04 * Math.sin(simTime * 5))); } else ring.visible = false;
+  } else ring.visible = false;
   // dough lump breathes while kneading
   const kn = S.stn.knead; world.lump.scale.set(1 + (kn.act > 0 ? 0.12 * Math.sin(simTime * 12) : 0), 1 + (kn.act > 0 ? 0.18 * Math.cos(simTime * 12) : 0), 1);
   world.lump.visible = S.buf.simit[1] + S.buf.simit[2] + S.buf.simit[3] + S.buf.simit[4] + S.racks.simit > 0 || kn.flag === 'ok';
@@ -2906,16 +2897,7 @@ function initInput(canvas) {
       else if (!gesture.moved) UI.select('worker', gesture.w.id);
     } else if (gesture.mode === 'pan' && !gesture.moved) {
       const hit = pickProxy(e.clientX, e.clientY);
-      if (hit) {
-        if (ui.selWorker && (hit.kind === 'station' || hit.kind === 'spot')) {
-          UI.dropWorker(ui.selWorker, hit);
-          UI.select(null);
-        } else {
-          UI.select(hit.kind, hit.id);
-        }
-      } else {
-        UI.select(null);
-      }
+      if (hit) UI.select(hit.kind, hit.id); else UI.select(null);
     }
     if (ptrs.size === 0) gesture = null; else if (ptrs.size === 1) gesture = { mode: 'pan', sx: 0, sy: 0, moved: true };
     drag = drag && gesture && gesture.mode === 'worker' ? drag : null;
@@ -3646,14 +3628,6 @@ listeners.push((type, d) => {
       if (rr() < 0.85) spawnCustomer(d.spot);
       if (now - lastCoin > 140) { lastCoin = now; SFX.coin(); }
       if (d.spot !== 'shop' && now - lastCall > 3500 && rr() < 0.5) { lastCall = now; SFX.call(); }
-      const spotDef = SPOT3D[d.spot];
-      if (spotDef) {
-        _v.set(spotDef.pos[0], streetY(spotDef.pos[1]) + 1.2, spotDef.pos[1]).project(camera);
-        const sx = (_v.x * 0.5 + 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight;
-        if (_v.z < 1 && sx >= 0 && sx <= innerWidth && sy >= 0 && sy <= innerHeight) {
-          spawnFloatCurrency(sx, sy, d.q * S.sell[d.p]);
-        }
-      }
       break;
     }
     case 'burnt': toast(t('tst_burnt'), 'bad', 'flame'); SFX.burn(); break;
@@ -3753,6 +3727,8 @@ window.addEventListener('keydown', e => {
   if (pan && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); panBy(pan[0], pan[1]); }
 });
 function resizeHudVar() { const h = $('hud').offsetHeight || 56; document.documentElement.style.setProperty('--hudH', h + 8 + 'px'); }
+// the HUD wraps to more rows on narrow screens and its chips change text, so follow its height
+if (window.ResizeObserver) new ResizeObserver(() => { if (ui.inGame) resizeHudVar(); }).observe($('hud'));
 window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); });
 // hidden tab: the pause menu opens during the day (as before) and the audio stops, following the arena-kit
 // "pause when the tab is hidden" setting; on return the pause menu stays open until the player resumes
