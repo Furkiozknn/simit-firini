@@ -436,6 +436,111 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
 }
 .lbl.gold .lbl-badge { background: #FFD040; color: #2A150C; border-color: #FFF2C2; }
 @keyframes goldPulse { from { filter: brightness(1); } to { filter: brightness(1.3); } }
+
+/* Burn alarm: flashes the oven icon & label in intense pulsing ember red when unattended past 30s or burning */
+.lbl.burn-alarm {
+  background: linear-gradient(180deg, #8A1A0C 0%, #4D0A04 100%) !important;
+  border-color: #FF5A36 !important;
+  box-shadow: 0 0 20px rgba(255, 60, 30, 0.95), 0 4px 14px rgba(0, 0, 0, 0.85) !important;
+  animation: burnPulse .5s ease-in-out infinite alternate !important;
+}
+.lbl.burn-alarm svg, svg.burn-alarm {
+  color: #FF6E4A !important;
+  filter: drop-shadow(0 0 6px rgba(255, 60, 30, 0.95));
+  animation: burnIconPulse .4s ease-in-out infinite alternate !important;
+}
+.lbl.burn-alarm .lbl-badge {
+  background: #FF3D1F !important;
+  color: #FFFFFF !important;
+  border-color: #FFA394 !important;
+}
+#dPeel.burn-alarm {
+  background: linear-gradient(180deg, #E03516 0%, #991D06 100%) !important;
+  border-color: #FFA394 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 22px rgba(255, 60, 30, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  animation: burnPulse .5s ease-in-out infinite alternate !important;
+}
+@keyframes burnPulse {
+  0% {
+    border-color: #FF5A36;
+    box-shadow: 0 0 10px rgba(255, 60, 30, 0.6), 0 4px 12px rgba(10, 4, 1, 0.65);
+    filter: brightness(1);
+  }
+  100% {
+    border-color: #FF9E8A;
+    box-shadow: 0 0 28px rgba(255, 40, 10, 1), 0 0 12px rgba(255, 120, 80, 0.8), 0 4px 14px rgba(0, 0, 0, 0.9);
+    filter: brightness(1.35);
+  }
+}
+@keyframes burnIconPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(255, 60, 20, 0.7)); }
+  100% { transform: scale(1.22); filter: drop-shadow(0 0 12px rgba(255, 30, 0, 1)); color: #FFD4CC; }
+}
+
+/* Floating DOM currency FX ('+₺X') rising from sales spots on successful transactions */
+#moneyFx {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+}
+.floating-money {
+  position: absolute;
+  pointer-events: none;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 20px;
+  color: #FFD866;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(243, 186, 66, 0.8),
+    0 0 20px rgba(224, 83, 22, 0.55);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  transform: translate(-50%, -50%);
+  animation: floatMoneyUp 1.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@keyframes floatMoneyUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -20%) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.18);
+  }
+  35% {
+    transform: translate(-50%, -100%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -170%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -230%) scale(0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lbl.burn-alarm, #dPeel.burn-alarm, .lbl.burn-alarm svg, svg.burn-alarm {
+    animation: none !important;
+  }
+  .floating-money {
+    animation: floatMoneyFade 1.25s ease-out forwards;
+  }
+  @keyframes floatMoneyFade {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}
 @media (pointer: coarse) { .lbl { min-height: 44px; padding: 6px 14px; } }
 
 /* Tap-to-assign: worker selection outline & station assignment target states */
@@ -750,6 +855,7 @@ table.t td {
 <body>
 <canvas id="c" tabindex="-1"></canvas>
 <div id="labels"></div>
+<div id="moneyFx" aria-hidden="true"></div>
 
 <div id="hud" class="glass hidden">
   <div class="brand" id="brand"></div>
@@ -1753,13 +1859,35 @@ function nextToBake() {
 function bake(dt) {
   const o = S.oven; o.act = Math.max(0, o.act - dt);
   proofTick(dt);
+  const ovenWorkers = workersAt('station', 'oven').length;
   for (const ov of o.ovens) if (ov.cd > 0) ov.cd = Math.max(0, ov.cd - dt);
+  for (let oi = 0; oi < o.ovens.length; oi++) {
+    const ov = o.ovens[oi];
+    const hasBatch = ov.slots.some(sl => !!sl.p);
+    if (ovenWorkers === 0 && hasBatch) {
+      ov.unattended = (ov.unattended || 0) + dt;
+      if (ov.unattended >= 30 && !ov._alerted30) {
+        ov._alerted30 = true;
+        emit('ovenunattended', { oi, time: ov.unattended });
+      }
+    } else {
+      ov.unattended = 0;
+      ov._alerted30 = false;
+    }
+    for (const sl of ov.slots) {
+      if (sl.p && ovenWorkers === 0) {
+        sl.unattended = (sl.unattended || 0) + dt;
+      } else {
+        sl.unattended = 0;
+      }
+    }
+  }
   for (const ov of o.ovens) for (const sl of ov.slots) {
     if (!sl.p) {
       const p = nextToBake();
-      if (p) { const idx = DATA.products[p].steps.length - 1; S.buf[p][idx]--; const q = proofClass(p, S.proof.age[p].shift()); S.st.day.pq[q]++; sl.p = p; sl.q = q; sl.t = 0; sl.bt = bakeTime(p); sl.done = false; sl.wait = 0; S.st.day.fuel += DATA.fuel; }
+      if (p) { const idx = DATA.products[p].steps.length - 1; S.buf[p][idx]--; const q = proofClass(p, S.proof.age[p].shift()); S.st.day.pq[q]++; sl.p = p; sl.q = q; sl.t = 0; sl.bt = bakeTime(p); sl.done = false; sl.wait = 0; sl.unattended = 0; S.st.day.fuel += DATA.fuel; }
     } else if (!sl.done) { sl.t += dt; if (sl.t >= sl.bt) { sl.done = true; sl.wait = 0; } }
-    else { sl.wait += dt; if (sl.wait > DATA.grace) { S.st.day.burnt++; emit('burnt', { p: sl.p }); sl.p = null; sl.done = false; } }
+    else { sl.wait += dt; if (sl.wait > DATA.grace) { S.st.day.burnt++; emit('burnt', { p: sl.p }); sl.p = null; sl.done = false; sl.unattended = 0; } }
   }
   const rate = pullRate(); o.rate = rate; o.pull = Math.min(o.pull + rate * dt, 1 + rate * dt);
   let g = 0; o.flag = o.flag === 'full' ? 'full' : 'ok';
@@ -1839,7 +1967,9 @@ function demand(dt, h) {
       if (!p) { d.missed++; d.hr[hi].missed++; d.bySpot[sp].missed++; continue; }
       const qs = DATA.products[p].q; let q = Math.min(qs[Math.floor(rnd() * qs.length)], avail(p));
       if (sp === 'shop') S.racks[p] -= q; else who.s.tray[p] -= q;
-      recSale(sp, p, q, S.sell[p] * (sp === 'shop' ? rackQ(p) : trayQ(who.s, p)), h); emit('sale', { spot: sp, p, q, who: who ? who.id : 0 });
+      const unitPrice = S.sell[p] * (sp === 'shop' ? rackQ(p) : trayQ(who.s, p));
+      const amount = Math.round(q * unitPrice);
+      recSale(sp, p, q, unitPrice, h); emit('sale', { spot: sp, p, q, amount, who: who ? who.id : 0 });
     }
   }
 }
@@ -2938,6 +3068,82 @@ function goldCue() {
   const d = $('dPeel'); if (d) d.classList.toggle('hot', on);
   if (ovenLabel) ovenLabel.el.classList.toggle('gold', on);
 }
+let burnOn = false, burnAlarmUntil = 0;
+function triggerBurnAlarm(ms = 6000) {
+  burnAlarmUntil = Math.max(burnAlarmUntil, performance.now() + ms);
+}
+function burnCue() {
+  const unattended30 = ui.inGame && S.phase === 'day' && S.oven && S.oven.ovens.some((ov, i) => i < S.oven.count && ((ov.unattended >= 30) || ov.slots.some(sl => sl.p && sl.unattended >= 30)));
+  const burning = burnAlarmUntil > performance.now() || unattended30;
+  if (burning !== burnOn) {
+    burnOn = burning;
+    if (ovenLabel) updateLabels(true);
+  }
+  if (ovenLabel && ovenLabel.el) {
+    ovenLabel.el.classList.toggle('burn-alarm', burning);
+    const svg = ovenLabel.el.querySelector('svg');
+    if (svg) svg.classList.toggle('burn-alarm', burning);
+  }
+  const d = $('dPeel');
+  if (d) d.classList.toggle('burn-alarm', burning);
+}
+const _moneyV = new THREE.Vector3();
+function spawnFloatingMoney(spot, amount, whoId) {
+  const host = $('moneyFx') || $('labels') || document.body;
+  if (!host) return;
+  while (host.childElementCount >= 20) {
+    if (host.firstElementChild) host.firstElementChild.remove();
+    else break;
+  }
+  let sx = window.innerWidth / 2;
+  let sy = window.innerHeight / 2;
+  let found = false;
+
+  if (whoId && agents && agents.has(whoId)) {
+    const a = agents.get(whoId);
+    if (a) {
+      _moneyV.set(a.x, standY(a.x, a.z) + 1.85, a.z).project(camera);
+      if (_moneyV.z < 1) {
+        sx = (_moneyV.x * 0.5 + 0.5) * window.innerWidth;
+        sy = (-_moneyV.y * 0.5 + 0.5) * window.innerHeight;
+        found = true;
+      }
+    }
+  }
+
+  if (!found && spot) {
+    const spLbl = labels.find(l => l.d.kind === 'spot' && l.d.id === spot);
+    if (spLbl) {
+      _moneyV.copy(spLbl.v).project(camera);
+      if (_moneyV.z < 1) {
+        sx = (_moneyV.x * 0.5 + 0.5) * window.innerWidth;
+        sy = (-_moneyV.y * 0.5 + 0.5) * window.innerHeight;
+        found = true;
+      }
+    } else if (typeof SPOT3D !== 'undefined' && SPOT3D[spot]) {
+      const sp = SPOT3D[spot];
+      const y = streetY(sp.pos[1]) + (spot === 'shop' ? FLOOR_Y + SPOT3D.shop.lbl : sp.lbl);
+      _moneyV.set(sp.pos[0], y, sp.pos[1]).project(camera);
+      if (_moneyV.z < 1) {
+        sx = (_moneyV.x * 0.5 + 0.5) * window.innerWidth;
+        sy = (-_moneyV.y * 0.5 + 0.5) * window.innerHeight;
+        found = true;
+      }
+    }
+  }
+
+  const jitterX = (Math.random() - 0.5) * 26;
+  const jitterY = (Math.random() - 0.5) * 10;
+
+  const el = document.createElement('div');
+  el.className = 'floating-money';
+  el.textContent = '+₺' + (amount || 1);
+  el.style.left = (sx + jitterX).toFixed(1) + 'px';
+  el.style.top = (sy + jitterY).toFixed(1) + 'px';
+
+  host.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1300);
+}
 const SPOT_ICON = { shop: 'shop', pier: 'ferry', school: 'school', park: 'park', office: 'office', tea: 'tea' };
 function labelText(l) {
   const { kind, id } = l.d; let pip = 'good', txt = '', icon = '', sub = '';
@@ -2945,9 +3151,18 @@ function labelText(l) {
     const sn = id === 'oven' ? S.oven : S.stn[id], n = workersAt('station', id).length;
     icon = id === 'oven' ? 'oven' : 'dough'; txt = t('st_' + id);
     sub = n > 0 ? n : '0';
-    if (id === 'oven') pip = sn.flag === 'full' ? 'warn' : (S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)) ? 'bad' : (n ? 'good' : 'warn'));
-    if (id === 'oven' && S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o))) sub = t('gold_now');
-    else pip = sn.flag === 'noing' ? 'bad' : (sn.flag === 'ok' ? (n ? 'good' : 'warn') : 'warn');
+    if (id === 'oven') {
+      const isBurning = burnOn || (S.phase === 'day' && S.oven.ovens.some(o => o.slots.some(s => s.done && s.wait > 3)));
+      if (isBurning) {
+        pip = 'bad';
+        sub = t('burn_now');
+      } else {
+        pip = sn.flag === 'full' ? 'warn' : (n ? 'good' : 'warn');
+        if (S.phase === 'day' && S.oven.ovens.some((o, i) => i < S.oven.count && ovenGold(o))) sub = t('gold_now');
+      }
+    } else {
+      pip = sn.flag === 'noing' ? 'bad' : (sn.flag === 'ok' ? (n ? 'good' : 'warn') : 'warn');
+    }
   } else if (kind === 'rack') {
     icon = 'rack'; txt = t('racks');
     sub = rackTotal() + '/' + rackCap();
@@ -3376,7 +3591,7 @@ addTX({
   // toasts
   tst_burnt: ['Pişen ürün yandı!', 'A tray burnt!'], tst_delivery: ['Tedarikçi geldi: {0} × {1}', 'Supplier van arrived: {0} × {1}'], tst_cok: ['Sözleşme tamam: +{0}', 'Contract delivered: +{0}'], tst_cfail: ['Sözleşme tutmadı: -{0}, itibar düştü', 'Contract missed: -{0}, reputation drops'],
   tst_skill: ['{0} yeni bir beceri seviyesine ulaştı', '{0} reached a new skill level'], tst_out: ['{0} bitti: {1} duruyor', 'Out of {0}: {1} stopped'], tst_hire: ['{0} ekibe katıldı', '{0} joined the team'], tst_upg: ['Yükseltme tamam', 'Upgrade done'],
-  tst_open: ['Dükkân açıldı', 'The shop is open'], tst_full: ['Raflar dolu: fırın bekliyor', 'Racks are full: the oven waits'], tst_ordered: ['Sipariş verildi', 'Order placed'], tst_assigned: ['{0} → {1}', '{0} → {1}'], tst_saved: ['Kaydedildi', 'Saved'], tst_wxmod: ['{0}', '{0}'], tst_restock: ['Fırında işçi yok', 'No worker at the oven'],
+  tst_open: ['Dükkân açıldı', 'The shop is open'], tst_full: ['Raflar dolu: fırın bekliyor', 'Racks are full: the oven waits'], tst_ordered: ['Sipariş verildi', 'Order placed'], tst_assigned: ['{0} → {1}', '{0} → {1}'], tst_saved: ['Kaydedildi', 'Saved'], tst_wxmod: ['{0}', '{0}'], tst_restock: ['Fırında işçi yok', 'No worker at the oven'], tst_oven_unattended: ['Fırın 30 sn sahipsiz kaldı: simitler yanıyor!', 'Oven unattended for 30s: bread is burning!'],
   tst_worker_sel: ['{0} seçildi: istasyona veya noktaya dokun', '{0} selected: tap a station or spot to assign'],
   hint: ['Sürükle ya da dokun-ata: işçiyi tezgâha veya sokak noktasına ata · Tekerlek / kıstır: yakınlaştır', 'Drag or tap-to-assign: assign worker to a station or street spot · Wheel / pinch: zoom'],
   selected: ['Seçildi', 'Selected'], assign_to: ['İstasyon ata', 'Assign to station'], idle_st: ['Boş', 'Idle'],
@@ -3394,7 +3609,7 @@ addTX({
   proof_note: ['Şekillenen hamur fırından önce tahtada dinlenir. Sıcakta çabuk, soğukta geç kabarır. Fırın yetişmezse bekleyen hamur da fazla mayalanır: ikinci fırın ya da fırına ikinci işçi yardımcı olur.', 'Shaped dough rests on the board before the oven. It rises fast in the heat and slowly in the cold. If the oven cannot keep up, waiting dough over-proofs too: a second oven or a second baker on the oven helps.'],
   proof_today: ['Bugün: ideal {0} · ağır {1} · çökük {2} · altın {3}', 'Today: ideal {0} · dense {1} · collapsed {2} · golden {3}'],
   board: ['Tahtada dinlenen', 'Resting on the board'], oven_n: ['Fırın {0}', 'Oven {0}'],
-  gold_title: ['Altın pişme', 'Golden bake'], gold_btn: ['Altın çek', 'Golden pull'], gold_now: ['Altın an!', 'Golden!'],
+  gold_title: ['Altın pişme', 'Golden bake'], gold_btn: ['Altın çek', 'Golden pull'], gold_now: ['Altın an!', 'Golden!'], burn_now: ['Yanıyor!', 'Burning!'],
   gold_hint: ['Simit altın renge dönünce fırın parlar ve zil çalar: o an G tuşuna ya da Altın çek düğmesine bas, fiyat +%25. Erken ya da geç basarsan kürek 2 sn bekler.', 'When the simit turns golden the oven glows and a bell rings: press G or Golden pull right then for +25% price. Too early or too late and the peel needs 2 s.'],
   tst_gold: ['Altın pişme! {0} parça +%25', 'Golden bake! {0} pieces +25%'],
   why_peelcd: ['Kürek henüz hazır değil.', 'The peel is not ready yet.'], why_peelmiss: ['Erken ya da geç: fırında altın an yok.', 'Too early or too late: nothing in the oven is golden.'], why_rackfull: ['Raflar dolu.', 'The racks are full.'], why_kind: ['Olmaz.', 'Not possible.'],
@@ -4063,6 +4278,13 @@ function resetVisual() {
   sel = null; ui.selWorker = 0; hoverKey = '';
   for (const wl of workerLabels.values()) { if (wl.el.parentNode) wl.el.parentNode.removeChild(wl.el); }
   workerLabels.clear();
+  burnAlarmUntil = 0; burnOn = false;
+  if (ovenLabel && ovenLabel.el) {
+    ovenLabel.el.classList.remove('burn-alarm');
+    const svg = ovenLabel.el.querySelector('svg');
+    if (svg) svg.classList.remove('burn-alarm');
+  }
+  const mf = $('moneyFx'); if (mf) mf.innerHTML = '';
 }
 function hideOverlays() { for (const id of ['planM', 'summary', 'endM', 'pause', 'settings']) show$(id, false); ui.planOpen = false; ui.paused = false; ui.endShown = false; }
 function enterGame() {
@@ -4110,13 +4332,28 @@ listeners.push((type, d) => {
   if (!ui.inGame) return;
   switch (type) {
     case 'sale': {
+      if (!ui.quiet) {
+        const amt = d.amount || (d.q ? Math.round(d.q * (S.sell[d.p] || 10)) : 10);
+        spawnFloatingMoney(d.spot, amt, d.who);
+      }
       if (ui.quiet) return; const now = performance.now();
       if (rr() < 0.85) spawnCustomer(d.spot);
       if (now - lastCoin > 140) { lastCoin = now; SFX.coin(); }
       if (d.spot !== 'shop' && now - lastCall > 3500 && rr() < 0.5) { lastCall = now; SFX.call(); }
       break;
     }
-    case 'burnt': toast(t('tst_burnt'), 'bad', 'flame'); SFX.burn(); break;
+    case 'burnt': {
+      triggerBurnAlarm(6000);
+      toast(t('tst_burnt'), 'bad', 'flame');
+      SFX.burn();
+      break;
+    }
+    case 'ovenunattended': {
+      triggerBurnAlarm(6000);
+      toast(t('tst_oven_unattended'), 'bad', 'flame');
+      SFX.burn();
+      break;
+    }
     case 'gold': {
       if (ui.quiet) return; toast(t('tst_gold', d.n), 'good', 'flame'); SFX.goldPull();
       if (!RM) { const z0 = d.oi === 0 ? -0.6 : 3.0; for (let i = 0; i < 14; i++) world.sparks.emit(-6.95, FLOOR_Y + 1.4 + rr() * 0.6, z0 + (rr() - 0.5) * 1.6, 1.2 + rr() * 1.2, 0.8 + rr() * 1.4, (rr() - 0.5) * 1.2, 1.1); }
@@ -4134,6 +4371,11 @@ function watchProblems() {
   for (const st of STATION_IDS) { const s = S.stn[st]; if (s.flag === 'noing' && s.ing) { const k = st + s.ing; if (!lastMiss[k] || S.t - lastMiss[k] > 40) { lastMiss[k] = S.t; toast(t('tst_out', t('i_' + s.ing), t('st_' + st)), 'bad', 'warn'); SFX.bad(); } } }
   if (S.oven.flag === 'full' && (!lastMiss.full || S.t - lastMiss.full > 40)) { lastMiss.full = S.t; toast(t('tst_full'), 'info', 'rack'); }
   if (S.t - (lastMiss.oven || -99) > 40 && S.oven.ovens.some(o => o.slots.some(sl => sl.done && sl.wait > 4)) && !workersAt('station', 'oven').length) { lastMiss.oven = S.t; toast(t('tst_restock'), 'bad', 'flame'); }
+  const unattended30 = S.oven && S.oven.ovens.some(ov => ov.unattended >= 30);
+  if (unattended30 && S.t - (lastMiss.oven30 || -99) > 30) {
+    lastMiss.oven30 = S.t;
+    triggerBurnAlarm(6000);
+  }
   const kn = S.stn.knead.n || 0; if (kn !== lastKnead) { lastKnead = kn; const now = performance.now(); if (now - lastSlap > 420 && !ui.quiet) { lastSlap = now; SFX.slap(); } }
 }
 
@@ -4163,6 +4405,7 @@ window.simitfirini = {
   get cam() { return cam; }, get fps() { return Math.round(fpsEma); }, get calls() { return renderer ? renderer.info.render.calls : 0; }, get tris() { return renderer ? renderer.info.render.triangles : 0; },
   get errors() { return window.__errors; }, get missingText() { return window.__missing || []; }, bot: botPlan,
   get reducedMotion() { return RM; },
+  spawnFloatingMoney, triggerBurnAlarm, get burnAlarm() { return burnOn; },
   tut: {
     get active() { return tutActive; },
     get step() { return tutStep; },
@@ -4243,6 +4486,7 @@ function frame(now) {
   if (ui.inGame && FLAGS.auto && !ui.paused) autoDrive();
   if (running) { let rem = dtReal * ui.speed; while (rem > 1e-6 && S.phase === 'day') { const d = Math.min(rem, 0.1); step(d); rem -= d; } watchProblems(); }
   goldCue();
+  burnCue();
   if (tutActive) updateTutPosition();
   const vdt = ui.paused || (ui.inGame && modalBlocking() && !open$('title')) ? 0 : (running ? dtReal * Math.min(ui.speed, 2) : (ui.inGame ? dtReal : dtReal));
   if (!ui.inGame) { titleAng += dtReal; cam.az = 0.62 + Math.sin(titleAng * 0.12) * 0.12; placeCamera(); }
