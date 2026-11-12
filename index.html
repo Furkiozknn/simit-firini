@@ -1777,9 +1777,13 @@ function order(k, qty) {
   S.orders.push({ k, qty, at: S.phase === 'day' ? S.t + DATA.vanTime : 8 }); emit('order', { k, qty }); return { ok: true, cost: c };
 }
 function acceptContract(id) {
+  // Reject contracts outside active planning/day phases or once their delivery hour has passed
+  if (S.phase !== 'day' && S.phase !== 'plan') { toast(t('why_phase'), 'bad'); return { ok: false, why: 'phase' }; }
   const i = S.contracts.offers.findIndex(c => c.id === id); if (i < 0) return { ok: false, why: 'gone' };
+  const c = S.contracts.offers[i];
+  if (hourNow() >= c.hour) { toast(t('why_late'), 'bad'); return { ok: false, why: 'late' }; }
   if (S.contracts.active.length >= 2) return { ok: false, why: 'full' };
-  const c = S.contracts.offers[i]; if (!S.unlocked[c.p]) return { ok: false, why: 'locked' };
+  if (!S.unlocked[c.p]) return { ok: false, why: 'locked' };
   S.contracts.offers.splice(i, 1); S.contracts.active.push(c); emit('contract', { id }); return { ok: true };
 }
 function rollContracts() {
@@ -3566,7 +3570,7 @@ addTX({
   contracts: ['Sözleşmeler', 'Contracts'], accept: ['Kabul et', 'Accept'], no_offers: ['Şu an teklif yok.', 'No offers right now.'], active_c: ['Aktif', 'Active'],
   c_tea1: ['Köşe Çay Ocağı', 'Corner Tea House'], c_tea2: ['Vapur Çay Evi', 'Ferry Tea House'], c_school: ['Okul kantini', 'School canteen'],
   c_line: ['{0} adet {1} · saat {2} · adedi {3}', '{0} × {1} · by {2} · {3} each'], c_note: ['Sözleşme parçaları rezerve edilir. Tutmazsan ceza ve itibar kaybı olur.', 'Contract pieces are reserved. Missing it costs a fine and reputation.'],
-  why_cash: ['Yeterli para yok.', 'Not enough money.'], why_day: ['Henüz açılmadı.', 'Not unlocked yet.'], why_max: ['Zaten en üstte.', 'Already maxed.'], why_full: ['Bu noktada yer yok.', 'That spot is full.'], why_shop: ['Dükkân bir sokak noktası değil.', 'The shop is not a street spot.'], why_gone: ['Artık yok.', 'Not available anymore.'], why_phase: ['Şu an olmaz.', 'Not right now.'], why_locked: ['Önce tarifi al.', 'Buy the recipe first.'],
+  why_cash: ['Yeterli para yok.', 'Not enough money.'], why_day: ['Henüz açılmadı.', 'Not unlocked yet.'], why_max: ['Zaten en üstte.', 'Already maxed.'], why_full: ['Bu noktada yer yok.', 'That spot is full.'], why_shop: ['Dükkân bir sokak noktası değil.', 'The shop is not a street spot.'], why_gone: ['Artık yok.', 'Not available anymore.'], why_phase: ['Şu an olmaz.', 'Not right now.'], why_locked: ['Önce tarifi al.', 'Buy the recipe first.'], why_late: ['Teslim saati geçti.', 'Delivery hour has passed.'],
   // sales panel + side panel
   today: ['Bugün', 'Today'], revenue: ['Ciro', 'Revenue'], sold: ['Satılan', 'Sold'], missed: ['Kaçan müşteri', 'Lost buyers'], goal: ['Hedef', 'Goal'], rep: ['İtibar', 'Reputation'], lira: ['Kasa', 'Till'],
   lg_sold: ['Satılan', 'Sold'], lg_dem: ['Talep', 'Demand'], chart_title: ['Saatlik satış', 'Sales by hour'], spots_title: ['Noktalar', 'Spots'],
