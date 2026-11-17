@@ -4795,11 +4795,19 @@ function toTitle() {
   ui.inGame = false; hideOverlays(); show$('hud', false); show$('dock', false); show$('side', false); show$('sales', false); show$('hint', false); show$('title');
   G_UI.labelsOn = false; updateLabels(false); newGame(7); S.phase = 'plan'; resetVisual(); applyLang(); focusFirst('title');
 }
+// Portals (arena-kit v1.3 Arena.portal): an interstitial may play between days (summary -> next day) and before a new
+// game, on screens where the game already waits. Without a portal the action runs synchronously, exactly as before.
+let breakBusy = false;
+function afterBreak(f) {
+  if (!(window.Arena && Arena.portal && Arena.portal.name !== 'none')) return f(); // own site: synchronous, as before
+  if (breakBusy) return; breakBusy = true;
+  Arena.portal.midgame().catch(() => false).then(() => { breakBusy = false; f(); });
+}
 function flowAct(name) {
   switch (name) {
-    case 'nextday': show$('summary', false); nextDay(); saveGame(); SFX.click(); toast(t('tst_saved'), 'info', 'check'); enterGameKeep(); openPlan(); break;
+    case 'nextday': afterBreak(() => { show$('summary', false); nextDay(); saveGame(); SFX.click(); toast(t('tst_saved'), 'info', 'check'); enterGameKeep(); openPlan(); }); break;
     case 'endless': show$('endM', false); ui.endShown = false; ui.finished = false; goEndless(); nextDay(); saveGame(); enterGameKeep(); openPlan(); break;
-    case 'again': show$('endM', false); if (S.daily) startDaily(true); else startNew(); break;
+    case 'again': afterBreak(() => { show$('endM', false); if (S.daily) startDaily(true); else startNew(); }); break;
     case 'share': shareResult(); break;
     case 'mainmenu2': show$('endM', false); toTitle(); break;
   }
