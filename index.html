@@ -1841,6 +1841,7 @@ const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } 
 let RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
 if (window.Arena) { RM = !!Arena.settings.reducedMotion; Arena.on('settings', st => { RM = !!st.reducedMotion; }); }
 const settings = Object.assign({ master: 0.8, music: 0.6, sfx: 0.8, lang: /^tr/i.test(navigator.language || '') ? 'tr' : 'en', quality: (coarse && Math.min(innerWidth, innerHeight) < 820) ? 'low' : 'high', musicOn: true, sfxOn: true }, store.get(KEY.settings) || {});
+if (settings.lang !== 'tr' && settings.lang !== 'en') settings.lang = (/^tr/i.test(navigator.language || '') ? 'tr' : 'en'); // stored unknown language -> browser's
 if (FLAGS.lang === 'en' || FLAGS.lang === 'tr') settings.lang = FLAGS.lang;
 const saveSettings = () => store.set(KEY.settings, settings);
 const lowQ = () => FLAGS.low || settings.quality === 'low';
