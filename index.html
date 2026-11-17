@@ -542,6 +542,9 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
   }
 }
 @media (pointer: coarse) { .lbl { min-height: 44px; padding: 6px 14px; } }
+/* Yazı denetimi (2026-11): dar telefonda istasyon/işçi etiketleri birbirinin üstüne yığılıyordu; biraz küçülür,
+   updateLabels() sonunda declutterLabels() çakışanları aşağı kaydırır */
+@media (pointer: coarse) and (max-width: 480px) { .lbl { min-height: 38px; padding: 4px 10px; font-size: 12px; gap: 4px; } }
 
 /* Tap-to-assign: worker selection outline & station assignment target states */
 .lbl.lbl-worker {
@@ -3459,8 +3462,28 @@ function labelText(l) {
 }
 const _v = new THREE.Vector3();
 const workerLabels = new Map();
+// Etiket çakışması: yukarıdan aşağı yerleştirilir; daha önce konan bir etiketle kesişen etiket onun altına kayar.
+const _lblPlace = [];
+function declutterLabels(W, H) {
+  const items = _lblPlace.sort((a, b) => a.y - b.y), placed = [];
+  for (const it of items) {
+    if (it.wl) { if (!it.wl.bw || it.wl.dirty) { it.wl.bw = it.el.offsetWidth; it.wl.bh = it.el.offsetHeight; it.wl.dirty = false; } it.w = it.wl.bw; it.h = it.wl.bh; }
+    it.x = Math.max(it.w / 2 + 4, Math.min(W - it.w / 2 - 4, it.x)); // ekran kenarında yarısı dışarıda kalmasın
+    let y = it.y;
+    for (let k = 0; k < 8; k++) {
+      const hit = placed.find(p => Math.abs(p.x - it.x) < (p.w + it.w) / 2 + 4 && Math.abs(p.y - y) < (p.h + it.h) / 2 + 2);
+      if (!hit) break;
+      y = hit.y + (hit.h + it.h) / 2 + 3;
+    }
+    y = Math.min(y, H - 4);
+    it.y = y; placed.push(it);
+    it.el.style.transform = 'translate(' + it.x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(-50%,-100%)';
+  }
+  _lblPlace.length = 0;
+}
 function updateLabels(refreshText) {
   const w = innerWidth, h = innerHeight;
+  _lblPlace.length = 0;
   const hasSelWorker = !!ui.selWorker;
   for (const l of labels) {
     if (l.d.id === 'oven' && false) continue;
@@ -3476,7 +3499,10 @@ function updateLabels(refreshText) {
     _v.copy(l.v).project(camera);
     const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15 && G_UI.labelsOn;
     l.el.style.display = vis ? '' : 'none';
-    if (vis) l.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+    if (vis) {
+      if (refreshText || !l.bw) { l.bw = l.el.offsetWidth; l.bh = l.el.offsetHeight; }
+      _lblPlace.push({ el: l.el, x: (_v.x * 0.5 + 0.5) * w, y: (-_v.y * 0.5 + 0.5) * h, w: l.bw, h: l.bh });
+    }
   }
   // sync & update floating worker labels
   if (S && S.workers && G_UI.labelsOn) {
@@ -3511,7 +3537,7 @@ function updateLabels(refreshText) {
           _v.set(a.x, standY(a.x, a.z) + 1.85, a.z).project(camera);
           const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15;
           wl.el.style.display = vis ? '' : 'none';
-          if (vis) wl.el.style.transform = 'translate(' + ((_v.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-_v.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+          if (vis) _lblPlace.push({ el: wl.el, wl, x: (_v.x * 0.5 + 0.5) * w, y: (-_v.y * 0.5 + 0.5) * h });
           const isSel = ui.selWorker === wk.id;
           wl.el.classList.toggle('sel', isSel);
           wl.el.setAttribute('aria-pressed', isSel ? 'true' : 'false');
@@ -3523,6 +3549,7 @@ function updateLabels(refreshText) {
             if (key !== wl.last) {
               wl.last = key;
               wl.el.innerHTML = ic('people') + '<span class="lbl-txt">' + wk.name + '</span>' + (badge ? '<span class="lbl-badge">' + badge + '</span>' : '');
+              wl.dirty = true;
             }
           }
         }
@@ -3531,6 +3558,7 @@ function updateLabels(refreshText) {
   } else {
     for (const wl of workerLabels.values()) wl.el.style.display = 'none';
   }
+  declutterLabels(w, h);
 }
 const G_UI = { labelsOn: true };
 
