@@ -109,6 +109,13 @@
 
 <p align="center"><img src="docs/phone.png" width="300" alt="Simit Fırını on a phone"><br><sub>On a phone</sub></p>
 
+## What's new in v2.1 (November 2026)
+
+- **Recent runs:** every finished game (day, till, reputation, victory / bankrupt / time up) is kept on the device, last 10; open it from the title screen. Stored under `arena.simitfirini.runs`; existing keys are untouched.
+- **Version tag and What's new:** the title screen shows `v2.1 · Kasım 2026`; tap it to read the changes. There is also an "Other games" link to <https://furkiozknn.github.io/> (hidden inside game portals).
+- **Phone title screen:** compact layout, so Settings and Language show without scrolling.
+- Full list in [CHANGELOG.md](CHANGELOG.md).
+
 ## Redesign & Performance
 
 **Art direction:** A hand-painted 2.5D bakery. Palette: crust `#B5651D`, sesame `#E6C27A`, oven glow `#FF7A1A`, flour white `#FAF3E6`, tiled blue `#2C5F8A`. Wood-fired oven glow with flicker, steam and flour dust motes; menus are chalkboards, the day summary is a baker-paper receipt.
@@ -136,6 +143,8 @@ python -m http.server 8000
 ```
 
 Then open <http://localhost:8000/>.
+
+Tests: `node tools/smoke.mjs` (page loads, 0 errors, SRI), `node tools/gate.mjs` (bot regression and phone layout) and `node tools/duman.mjs` (title screen, What's new, recent runs, start of play, phone view). All need the `playwright` package; `duman.mjs` also accepts `DUMAN_BROWSER=<browser exe>`.
 
 ## Made with Claude Code
 
