@@ -723,6 +723,16 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
 }
 #title .how li { margin-bottom: 4px; }
 #title .best { margin-top: 12px; font-size: 14px; color: var(--gold); font-family: var(--font); font-weight: 700; }
+#title .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; margin-top: 6px; }
+.lnk { background: none; border: 0; color: var(--gold); font: 700 13px var(--font); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px 8px; min-height: 36px; display: inline-flex; align-items: center; }
+.lnk:hover, .lnk:focus-visible { color: var(--gold-hi); }
+@media (pointer: coarse) { .lnk { min-height: 44px; } }
+#inBody ul { margin: 0 0 8px; padding-left: 20px; line-height: 1.5; font-size: 14.5px; }
+#inBody li { margin-bottom: 6px; }
+#inBody table { width: 100%; border-collapse: collapse; font-size: 14px; }
+#inBody th, #inBody td { padding: 5px 6px; text-align: left; border-bottom: 1px dashed rgba(255, 253, 248, .18); }
+#inBody th { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+#inBody .ver { color: var(--gold); font-weight: 700; margin: 0 0 8px; }
 .bunting { position: absolute; left: 0; right: 0; top: 0; height: 42px; pointer-events: none; }
 .bunting svg { width: 100%; height: 100%; display: block; }
 #loadmsg { margin-top: 10px; font-size: 13.5px; color: var(--ink-mute); min-height: 20px; font-weight: 600; }
@@ -819,6 +829,14 @@ table.t td {
   #hud .btn.icon { width: 44px; min-height: 44px; }
 }
 
+@media (max-width: 520px) and (min-height: 561px) {
+  #title .logo svg { width: 64px !important; height: 64px !important; }
+  #title .how { font-size: 13px; line-height: 1.35; padding: 8px 10px 8px 26px; }
+  #title .how li { margin-bottom: 2px; }
+}
+@media (max-width: 520px) and (min-height: 561px) and (max-height: 800px) {
+  #title .how { display: none; }
+}
 @media (max-height: 560px) {
   #title .how { display: none; }
   #title .logo svg { width: 75px; height: 75px; }
@@ -922,8 +940,10 @@ table.t td {
     </div>
     <div id="loadmsg"></div>
     <div class="best" id="tBest"></div>
+    <div class="meta"><button class="lnk" id="bNews" type="button"></button><button class="lnk" id="bRuns" type="button"></button><a class="lnk" id="bOther" target="_blank" rel="noopener" href="https://furkiozknn.github.io/"></a></div>
   </div>
 </div>
+<div id="infoM" class="screen dim hidden" style="z-index:52"><div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="inTitle"><h1 id="inTitle"></h1><div id="inBody"></div><div class="menu"><button class="btn primary" id="inClose" type="button"></button></div></div></div>
 <div id="pause" class="screen dim hidden"><div class="modal glass" role="dialog" aria-labelledby="pTitle"><h1 id="pTitle"></h1><div class="menu" id="pMenu"></div></div></div>
 <div id="settings" class="screen dim hidden" style="z-index:50"><div class="modal glass" role="dialog" aria-labelledby="sTitle"><h1 id="sTitle"></h1><div id="sBody"></div><div class="menu"><button class="btn primary" id="sClose"></button></div></div></div>
 <div id="planM" class="screen dim hidden" style="z-index:35"><div class="modal glass wide" role="dialog" aria-labelledby="plTitle"><div class="row"><h1 id="plTitle" class="grow"></h1><button class="btn icon" id="plClose" aria-label="Close"></button></div><div id="plBody"></div></div></div>
@@ -1835,7 +1855,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage unavailable */ } },
 };
-const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best', daily: 'arena.simitfirini.daily', tutDone: 'arena.simitfirini.tutDone' };
+const KEY = { settings: 'arena.simitfirini.settings', save: 'arena.simitfirini.save', best: 'arena.simitfirini.best', daily: 'arena.simitfirini.daily', tutDone: 'arena.simitfirini.tutDone', runs: 'arena.simitfirini.runs' };
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
 // reduced motion: the OS setting, or the arena-kit accessibility panel when it is present (it starts from the OS setting)
 let RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
@@ -4001,6 +4021,16 @@ addTX({
   daily: ['Günün Meydan Okuması', 'Daily challenge'], daily_info: ['seri {0} · en iyi {1}', 'streak {0} · best {1}'], daily_done: ['bugün tamam · seri {0}', 'done today · streak {0}'],
   daily_cont: ['devam: {0}. gün', 'continue: day {0}'], daily_start: ['Günün Meydan Okuması {0}: herkes aynı hava ve çırakla başlar', 'Daily challenge {0}: everyone starts with the same weather and apprentices'],
   daily_res: ['Günün Meydan Okuması {0}: seri {1} gün · en iyi {2}', 'Daily challenge {0}: streak {1} · best {2}'], daily_old: ['Bu meydan okuma {0} gününündü; seri bugüne sayılmadı.', 'This challenge was for {0}; the streak was not counted for today.'],
+  ver_label: ['v{0} · {1}', 'v{0} · {1}'], ver_date: ['Kasım 2026', 'November 2026'], news_btn: ['Yenilikler', "What's new"], news_title: ['Yenilikler', "What's new"],
+  news_ver: ['Sürüm {0} · {1}', 'Version {0} · {1}'],
+  news_1: ['Son koşular: bitirdiğin her oyunun günü, kasası ve itibarı bu cihazda saklanır (son 10 oyun).', 'Recent runs: the day, till and reputation of every finished game are kept on this device (last 10 games).'],
+  news_2: ['Ana ekranda sürüm etiketi, Yenilikler penceresi ve "Diğer oyunlar" bağlantısı.', 'Title screen: version tag, a What\'s new window and an "Other games" link.'],
+  news_3: ['Telefonda ana ekran sıkıştırıldı: Ayarlar ve Dil düğmeleri artık kaydırmadan görünür.', 'Phone title screen made compact: the Settings and Language buttons show without scrolling.'],
+  news_4: ['Kayıtların ve oynanışın hiçbiri değişmedi; eski kaydınla devam edebilirsin.', 'Saves and gameplay are unchanged; you can carry on with your old save.'],
+  runs_btn: ['Son koşular', 'Recent runs'], runs_title: ['Son koşular', 'Recent runs'], runs_none: ['Henüz bitirilmiş bir oyun yok. İlk oyunun bittiğinde burada görünür.', 'No finished game yet. Your first one will show up here.'],
+  runs_date: ['Tarih', 'Date'], runs_res: ['Sonuç', 'Result'], runs_day: ['Gün', 'Day'], runs_cash: ['Kasa', 'Till'], runs_rep: ['İtibar', 'Rep.'],
+  runs_won: ['Zafer', 'Victory'], runs_bankrupt: ['İflas', 'Bankrupt'], runs_time: ['Süre doldu', 'Time up'], runs_daily: ['günlük', 'daily'],
+  runs_sum: ['{0} oyun · {1} zafer', '{0} games · {1} victories'], other_btn: ['Diğer oyunlar', 'Other games'],
   share: ['Paylaş', 'Share'], another: ['Başka oyun', 'Another game'], a11y: ['Erişilebilirlik', 'Accessibility'], a11y_open: ['Aç', 'Open'],
   share_won: ['{0}. günde kazandım · kasa {1} · {2} yıldız', 'Won on day {0} · till {1} · {2} stars'], share_end: ['{0}. gün · kasa {1} · {2} yıldız', 'Day {0} · till {1} · {2} stars'],
   share_daily: ['Günün Meydan Okuması {0} · seri {1}', 'Daily challenge {0} · streak {1}'],
@@ -4130,7 +4160,7 @@ function setHTML(el, html) {
   el.innerHTML = html;
   if (key) { const n = el.querySelector('[data-k="' + key + '"]'); if (n) try { n.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
 }
-function modalBlocking() { return open$('planM') || open$('settings') || open$('pause') || open$('summary') || open$('endM') || open$('title'); }
+function modalBlocking() { return open$('infoM') || open$('planM') || open$('settings') || open$('pause') || open$('summary') || open$('endM') || open$('title'); }
 function btn(actName, a, b, label, cls, disabled) {
   return '<button class="btn sm ' + (cls || '') + (disabled ? ' off' : '') + '" data-act="' + actName + '" data-a="' + (a === undefined ? '' : a) + '" data-b="' + (b === undefined ? '' : b) + '" data-k="' + actName + ':' + a + ':' + b + '"' + (disabled ? ' aria-disabled="true"' : '') + '>' + label + '</button>';
 }
@@ -4191,7 +4221,7 @@ function applyLang() {
   $('plClose').innerHTML = ic('close'); $('plClose').setAttribute('aria-label', t('close'));
   $('pTitle').textContent = t('paused'); $('sTitle').textContent = t('set_title'); $('sClose').textContent = t('done');
   $('pMenu').innerHTML = '<button class="btn primary" data-act="resume">' + ic('play') + t('resume') + '</button><button class="btn" data-act="restart">' + t('restart') + '</button><button class="btn" data-act="settings">' + ic('gear') + t('settings') + '</button><button class="btn" data-act="mainmenu">' + ic('home') + t('menu') + '</button>';
-  const sv = store.get(KEY.save); $('bCont').classList.toggle('hidden', !(sv && sv.S && sv.S.v === 1)); showBest(); dailyButton();
+  const sv = store.get(KEY.save); $('bCont').classList.toggle('hidden', !(sv && sv.S && sv.S.v === 1)); showBest(); dailyButton(); metaTexts();
   if (!ui.loadDone) $('loadmsg').textContent = t('loading', ui.loadN || 0, 2);
   renderSettings(); if (ui.inGame) { hudUpdate(true); renderSide(true); renderSales(true); if (ui.planOpen) renderPlan(); }
   updateLabels(true);
@@ -4200,6 +4230,36 @@ function applyLang() {
 function showBest() {
   const b = store.get(KEY.best);
   $('tBest').textContent = !b ? t('best_none') : b.won ? t('best_win', b.day, money(b.lira)) : t('best_run', b.day, money(b.lira));
+}
+const GAME_VER = '2.1';
+function metaTexts() {
+  $('bNews').textContent = t('ver_label', GAME_VER, t('ver_date')) + ' · ' + t('news_btn'); $('bRuns').textContent = t('runs_btn'); $('bOther').textContent = t('other_btn');
+  if (window.Arena && Arena.portal && Arena.portal.name !== 'none') $('bOther').classList.add('hidden'); // portals forbid cross-promotion
+  $('inClose').textContent = t('close'); if (open$('infoM')) renderInfo(ui.infoKind);
+}
+function esc(x) { return String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderInfo(kind) {
+  ui.infoKind = kind;
+  if (kind === 'news') {
+    $('inTitle').textContent = t('news_title');
+    $('inBody').innerHTML = '<p class="ver">' + t('news_ver', GAME_VER, t('ver_date')) + '</p><ul>' + [1, 2, 3, 4].map(i => '<li>' + t('news_' + i) + '</li>').join('') + '</ul>';
+    return;
+  }
+  $('inTitle').textContent = t('runs_title');
+  const runs = store.get(KEY.runs, []), list = Array.isArray(runs) ? runs : [];
+  if (!list.length) { $('inBody').innerHTML = '<p class="sub">' + t('runs_none') + '</p>'; return; }
+  const loc = settings.lang === 'en' ? 'en-GB' : 'tr-TR';
+  const rows = list.map(r => { let d = ''; try { d = new Date(r.t).toLocaleDateString(loc, { day: 'numeric', month: 'short' }); } catch (e) { /* ignore */ }
+    return '<tr><td>' + esc(d) + '</td><td>' + t('runs_' + (r.res === 'won' ? 'won' : r.res === 'bankrupt' ? 'bankrupt' : 'time')) + (r.daily ? ' (' + t('runs_daily') + ')' : '') + '</td><td>' + esc(r.day) + '</td><td>' + esc(money(r.lira)) + '</td><td>' + esc(r.rep) + '</td></tr>'; }).join('');
+  $('inBody').innerHTML = '<p class="sub">' + t('runs_sum', list.length, list.filter(r => r.res === 'won').length) + '</p><table><thead><tr><th>' + t('runs_date') + '</th><th>' + t('runs_res') + '</th><th>' + t('runs_day') + '</th><th>' + t('runs_cash') + '</th><th>' + t('runs_rep') + '</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+function openInfo(kind) { renderInfo(kind); show$('infoM'); focusFirst('infoM'); }
+function closeInfo() { show$('infoM', false); const b = $(ui.infoKind === 'news' ? 'bNews' : 'bRuns'); if (b && open$('title')) try { b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+function recordRun(res) {
+  if (FLAGS.auto || (window.Arena && Arena.quiet)) return;
+  const old = store.get(KEY.runs, []), list = Array.isArray(old) ? old : [];
+  list.unshift({ t: Date.now(), res, day: S.day, lira: Math.round(S.lira), rep: +S.rep.toFixed(1), daily: !!S.daily });
+  store.set(KEY.runs, list.slice(0, 10));
 }
 function recordBest(res) {
   const b = store.get(KEY.best); let rec = false, nb = b;
@@ -4685,7 +4745,7 @@ function showSummary(L) {
   $('suBody').innerHTML = h; show$('summary'); focusFirst('summary');
 }
 function showEnd(res) {
-  const daily = !!S.daily, rec = daily ? false : recordBest(res);
+  const daily = !!S.daily, rec = daily ? false : recordBest(res); recordRun(res);
   let dailyLine = '';
   if (daily && window.Arena && !S.dailyDone) {
     const d = Arena.daily(); S.dailyDone = true;
@@ -4923,6 +4983,8 @@ document.addEventListener('change', e => { const t0 = e.target; if (t0.dataset &
 function toggleMusic() { settings.musicOn = !settings.musicOn; saveSettings(); audioInit(); audioResume(); if (settings.musicOn) musicStart(); audioApply(); hudUpdate(true); toast(settings.musicOn ? t('mus_on') : t('mus_off'), 'info', 'music'); }
 function toggleSfx() { settings.sfxOn = !settings.sfxOn; saveSettings(); audioInit(); audioResume(); audioApply(); hudUpdate(true); toast(settings.sfxOn ? t('sfx_on') : t('sfx_off'), 'info', 'speaker'); if (settings.sfxOn) SFX.click(); }
 $('bMusic').addEventListener('click', toggleMusic); $('bSfx').addEventListener('click', toggleSfx); $('bLang').addEventListener('click', () => setLang(settings.lang === 'tr' ? 'en' : 'tr'));
+$('bNews').addEventListener('click', () => openInfo('news')); $('bRuns').addEventListener('click', () => openInfo('runs')); $('inClose').addEventListener('click', closeInfo);
+$('infoM').addEventListener('click', e => { if (e.target === $('infoM')) closeInfo(); });
 $('bLangT').addEventListener('click', () => setLang(settings.lang === 'tr' ? 'en' : 'tr'));
 $('bPause').addEventListener('click', () => { if (S.phase === 'day' || ui.paused) setPaused(!ui.paused); });
 $('bPlay').addEventListener('click', () => startNew()); $('bCont').addEventListener('click', () => continueGame());
@@ -4930,6 +4992,7 @@ $('bDaily').addEventListener('click', () => startDaily(false));
 $('bSet').addEventListener('click', () => { audioInit(); openSettings(); }); $('sClose').addEventListener('click', closeSettings);
 $('plClose').addEventListener('click', () => closePlan());
 function onEscape() {
+  if (open$('infoM')) { closeInfo(); return; }
   if (open$('settings')) { closeSettings(); return; }
   if (!ui.inGame) return;
   if (open$('planM')) { closePlan(); return; }
@@ -4943,7 +5006,7 @@ window.addEventListener('keydown', e => {
   const tag = e.target.tagName; if ((tag === 'INPUT' || tag === 'SELECT') && e.key !== 'Escape') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
-  if (k === 'escape' || k === 'p') { e.preventDefault(); if (k === 'p' && (!ui.inGame || open$('planM') || open$('summary') || open$('endM') || open$('settings'))) return; onEscape(); return; }
+  if (k === 'escape' || k === 'p') { e.preventDefault(); if (k === 'p' && (!ui.inGame || open$('planM') || open$('summary') || open$('endM') || open$('settings') || open$('infoM'))) return; onEscape(); return; }
   if (k === 'm') { toggleMusic(); return; } if (k === 'x') { toggleSfx(); return; } if (k === 'l') { setLang(settings.lang === 'tr' ? 'en' : 'tr'); return; }
   if (k === 'f') { toggleFs(); return; }
   if (!ui.inGame || modalBlocking()) return;
