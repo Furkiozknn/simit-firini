@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://furkiozknn.github.io/simit-firini/">
-    <img src="docs/card.jpg" width="100%" alt="Simit Fırını: run a simit bakery on an old Istanbul street and send simit sellers across town. Click to play in your browser.">
+    <img src="docs/card-3d.jpg" width="100%" alt="Simit Fırını: run a simit bakery on an old Istanbul street and send simit sellers across town. Click to play in your browser.">
   </a>
 </p>
 
@@ -29,13 +29,29 @@
 
 ## Features
 
+<p align="center">
+  <img src="docs/features.jpg" width="100%" alt="A chalkboard menu of the game's features on a warm bakery wall: a full production chain, street selling, daily strategy, hands-on 3D management and a single-file 60 fps build, with a tourist girl and a baker girl with a tray of simit beside the oven.">
+</p>
+
+<details>
+<summary><b>Feature details</b></summary>
+
 - **Full bakery production chain:** Manage 5 distinct stations (kneading, shaping, molasses, sesame, oven) staffed by workers who gain skill; an unstaffed station runs at 30 % capacity with the owner filling in, but an unattended oven burns the bread.
 - **Dynamic street selling:** Dispatch simit sellers (simitçi) carrying trays across 5 key spots (pier, school, park, office, tea houses); hourly sales and foot traffic shift dynamically with the hour and weather (rain empties the park and pier, cold fills the tea houses).
 - **Daily strategy & expanding menu:** Plan morning production, set prices, order supplies, hire staff, buy upgrades, and take contracts to reach 5,000 lira and 4 stars of reputation by day 20, unlocking recipes for poğaça, açma, çatal, and pide.
 - **Hands-on 3D management:** Drag workers between stations or out to street spots directly in the scene; click station labels to inspect real-time sales and demand charts, with speed controls at 1x, 2x, or 4x.
 - **Ultra-lean web performance:** A single `index.html` running Three.js r170 delivering 60 fps at 20 &rarr; 28 draw calls (25.6k &rarr; 51.6k triangles) on Intel UHD 620, verified by an automated bot winning on day 17 with 0 JS errors (winning roughly 9 of 12 seeds between day 16 and 20; careless play bankrupt around day 7).
 
+</details>
+
 ## How to play
+
+<p align="center">
+  <img src="docs/how-to-play.jpg" width="100%" alt="A bakery receipt that lists the goal of 5,000 lira and 4 stars by day 20, three steps (plan the morning, manage the bake, work the street) and the main controls, beside the tourist girl and the baker girl with a tray of simit on a harbour pier at sunset.">
+</p>
+
+<details>
+<summary><b>Goal and steps</b></summary>
 
 > [!TIP]
 > **Goal:** 5,000 lira in the till **and** 4 stars of reputation by day 20. Afterwards you can keep playing in endless mode.
@@ -43,6 +59,8 @@
 1. **Plan the morning:** Before opening each morning, set production targets and retail prices, order flour and water from the supplier, assign workers to stations, and purchase equipment upgrades.
 2. **Manage the bake:** Press **Open the shop** and staff all 5 stations (kneading, shaping, molasses, sesame, oven). Unstaffed stations drop to 30 % output as the owner covers, but an unattended oven burns the bread.
 3. **Work the street:** Dispatch simitçi with trays to high-demand street spots (pier, school, park, office, tea houses). Adjust to weather and time of day, and restock trays before customer rushes pass.
+
+</details>
 
 <details>
 <summary><b>Rules and economy</b></summary>
