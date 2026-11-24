@@ -870,11 +870,39 @@ table.t td {
   table.prodt td[colspan] { grid-column: 1 / -1; }
   table.prodt td:empty { display: none; }
 }
+
+/* =================================================================================================
+   stil-3d (24.11.2026): the song video's soft 3D chibi clay world. Figures and props from assets/3d/,
+   softer rounder cards and buttons, a light tilt-shift blur at the top of the scene (shallow depth of field).
+   ================================================================================================= */
+#dof { position: fixed; left: 0; right: 0; top: 0; height: 22vh; pointer-events: none; z-index: 0;
+  backdrop-filter: blur(2px) saturate(1.06); -webkit-backdrop-filter: blur(2px) saturate(1.06);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.5) 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.5) 55%, transparent 100%); }
+.glass { border-radius: 18px; box-shadow: inset 0 0 0 2px rgba(255, 236, 205, 0.16), inset 0 0 40px rgba(233, 162, 59, 0.10), 0 14px 34px rgba(30, 12, 2, 0.45), 0 3px 8px rgba(30, 12, 2, 0.25); }
+.btn { border-radius: 14px; }
+.btn.primary { box-shadow: inset 0 2px 0 rgba(255, 248, 230, 0.6), inset 0 -3px 0 rgba(140, 70, 10, 0.25), 0 4px 0 #8C4A12, 0 8px 16px rgba(233, 162, 59, 0.35); }
+img.f3 { display: block; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(30, 12, 2, .45)); pointer-events: none; user-select: none; }
+#title .logo3 { display: flex; justify-content: center; align-items: flex-end; height: 140px; gap: 0; margin-top: -6px; }
+#title .logo3 img.f3 { height: 100%; width: auto; }
+#title .logo3 img.f3.simit { height: 44%; margin: 0 -6px 6px; z-index: 1; }
+#hud .brand img.f3 { width: 34px; height: 34px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .4)); }
+.endfig { display: flex; justify-content: center; align-items: flex-end; height: 110px; }
+.endfig img.f3 { height: 100%; width: auto; }
+.endfig img.f3.simit { height: 42%; margin: 0 -4px 4px; }
+.panel h2 img.f3, .modal h1 img.f3 { display: inline-block; height: 1.6em; width: auto; vertical-align: -0.45em; margin: -6px 2px -4px -2px; filter: drop-shadow(0 2px 3px rgba(30, 12, 2, .35)); }
+img.pi3 { display: inline-block; width: 26px; height: 22px; object-fit: contain; vertical-align: -6px; margin-right: 5px; filter: drop-shadow(0 1px 2px rgba(30, 12, 2, .35)); }
+@media (max-width: 900px) { #title .logo3 { height: 105px; } .endfig { height: 92px; } }
+@media (max-width: 520px) and (min-height: 561px) { #title .logo3 { height: 70px; } }
+@media (max-height: 800px) and (min-width: 521px) { #title .logo3 { height: 92px; } .endfig { height: 72px; } }
+@media (max-height: 560px) { #title .logo3 { height: 70px; } .endfig { height: 56px; } }
+@media (max-height: 480px) { #title .logo3 { height: 52px; } .endfig { height: 44px; } }
+@media (max-width: 680px) { #hud .brand img.f3 { width: 28px; height: 28px; } }
 </style>
 <script data-goatcounter="https://furkiozknn.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 <canvas id="c" tabindex="-1"></canvas>
+<div id="dof" aria-hidden="true"></div>
 <div id="labels"></div>
 <div id="moneyFx" aria-hidden="true"></div>
 
@@ -1917,6 +1945,9 @@ function buntingSvg() { // a strand of painted pennants over the title card
   for (let i = 0; i < 16; i++) { const x = 12 + i * 24.3, y = 8 + 22 * Math.sin(Math.PI * (x / 400)) * 0.92 + 1; h += '<path d="M' + (x - 8).toFixed(1) + ' ' + (y - 1).toFixed(1) + ' L' + (x + 8).toFixed(1) + ' ' + (y - 1).toFixed(1) + ' L' + x.toFixed(1) + ' ' + (y + 15).toFixed(1) + 'Z" fill="' + cols[i % 5] + '" stroke="#2E180E" stroke-width="1"/>'; }
   return h + '</svg>';
 }
+// stil-3d: a 3D clay figure / prop from assets/3d/ (alt empty: decoration next to text that already names it)
+function img3(n, cls) { return '<img class="f3' + (cls ? ' ' + cls : '') + '" src="assets/3d/' + n + '.webp" alt="" draggable="false">'; }
+function pIcon(p) { return '<img class="pi3" src="assets/3d/urun-' + p + '.webp" alt="" draggable="false">'; }
 function ic(n, cls) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' + (cls ? ' class="' + cls + '"' : '') + ' aria-hidden="true">' + (IC[n] || '') + '</svg>'; }
 const LOGO = (size) => '<svg viewBox="0 0 120 120" width="' + size + '" height="' + size + '" style="width:' + size + 'px;height:' + size + 'px" aria-hidden="true">'
   + '<defs>'
@@ -2891,9 +2922,11 @@ function addBakery(C, Wn) {
   for (let i = 0; i < 3; i++) C.box(5.0, 0.1, 1.1, COL.wood, -2.0, FLOOR_Y + 0.35 + i * 0.85, 1.4);
   for (const x of [-4.4, 0.4]) { C.box(0.14, 2.7, 0.14, COL.woodD, x, FLOOR_Y, 0.9); C.box(0.14, 2.7, 0.14, COL.woodD, x, FLOOR_Y, 1.9); }
   C.box(5.0, 0.12, 1.2, COL.woodD, -2.0, FLOOR_Y + 2.7, 1.4);
-  C.box(1.2, 1.1, 4.2, COL.wood, 2.6, FLOOR_Y, 1.6); C.box(1.4, 0.1, 4.4, COL.woodL, 2.6, FLOOR_Y + 1.1, 1.6);
-  C.box(0.5, 0.35, 0.4, COL.iron, 2.4, FLOOR_Y + 1.2, 2.6); C.box(0.4, 0.05, 0.3, COL.green, 2.4, FLOOR_Y + 1.55, 2.6);
-  C.cyl(0.35, 0.18, 0xD9A56A, 2.6, FLOOR_Y + 1.2, 0.7);
+  // shop counter: its own mesh (stil-3d hides it under the clay counter cut-out)
+  { const K = world.counterC || C;
+  K.box(1.2, 1.1, 4.2, COL.wood, 2.6, FLOOR_Y, 1.6); K.box(1.4, 0.1, 4.4, COL.woodL, 2.6, FLOOR_Y + 1.1, 1.6);
+  K.box(0.5, 0.35, 0.4, COL.iron, 2.4, FLOOR_Y + 1.2, 2.6); K.box(0.4, 0.05, 0.3, COL.green, 2.4, FLOOR_Y + 1.55, 2.6);
+  K.cyl(0.35, 0.18, 0xD9A56A, 2.6, FLOOR_Y + 1.2, 0.7); }
   // awning outside the shop window (orange/cream stripes)
   for (let i = 0; i < 8; i++) C.box(0.8, 0.1, 1.6, i % 2 ? COL.white : COL.accent, 4.2, FLOOR_Y + 3.4, -0.0 + i * 0.58 - 0.0, 0, 0, -0.32);
   for (let i = 0; i < 8; i++) C.box(0.12, 0.7, 0.58, i % 2 ? COL.white : COL.accent, 4.8, FLOOR_Y + 2.95, i * 0.58 - 0.0);
@@ -3026,8 +3059,10 @@ function buildOven(index) {
 
 function buildStaticWorld() {
   const C = Collector(), Wn = Collector();
+  world.counterC = Collector();
   addStaticBuildings(C, Wn); addBakery(C, Wn); addProps(C, Wn);
   const sm = new THREE.Mesh(C.build(), wmat.solid); sm.castShadow = true; sm.receiveShadow = true; scene.add(sm); world.parts.static = sm;
+  const cm = new THREE.Mesh(world.counterC.build(), wmat.solid); cm.castShadow = true; cm.receiveShadow = true; scene.add(cm); world.parts.counter = cm; world.counterC = null;
   const wm = new THREE.Mesh(Wn.build(), wmat.win); scene.add(wm); world.parts.win = wm;
   const gm = buildGroundMesh(); scene.add(gm); world.parts.ground = gm;
   for (let i = 0; i < 2; i++) { const o = buildOven(i); scene.add(o); world.ovenMeshes.push(o); }
@@ -3142,6 +3177,135 @@ class Crowd {
 const APRONS = [0xFAF3E6, 0x2C5F8A, 0xE6C27A, 0xFAF3E6, 0xB5651D];
 const SKINS = [0xF1C9A0, 0xE0AC7E, 0xC98E62, 0xA66E48, 0xF5D5B5];
 const CLOTHES = [0x3C6EA8, 0x8E3B3B, 0x5E8F4A, 0xC9A04A, 0x6A4E8A, 0x2F7F86, 0xB5603A, 0x7A7A82, 0xD88F9A, 0x3F4E63];
+
+// --- stil-3d: chibi clay sprites from the song video (assets/3d/chibi.webp, 3x3 atlas) ---------------------------
+// Bakers, the simit seller and the street customers are camera-facing cut-outs of 3D chibi figures, one draw call per
+// layer; the seller's tray (tabla.webp), the wood-fired oven (firin.webp) and the shop counter (tezgah.webp) are cut-outs
+// too. Positions come from the same agent code as the old instanced people, so picking, timing and the simulation do
+// not change; the old meshes stay as the fallback until the textures load.
+// three.js draws a uuid from Math.random for every texture, material, geometry and object. The game's sim and bot use
+// their own seeded S.rng, but the style layer still builds everything inside sakin(): a private stream, so loading the
+// sprites never shifts Math.random for anything else.
+let ST_RND = 0x51e17f1d;
+function sakin(fn) {
+  const r = Math.random;
+  Math.random = () => { ST_RND = (ST_RND + 0x6D2B79F5) >>> 0; let t = ST_RND; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  try { return fn(); } finally { Math.random = r; }
+}
+const CH = { ready: false, k: 1, light: { value: 1 }, uR: { value: new THREE.Vector3(1, 0, 0) }, uF: { value: new THREE.Vector3(0, 0, 1) }, uStr: { value: 1.38 } };
+const CH_CELL = { baker: [0, 1, 0, 2], seller: 3, cust: [4, 5, 6, 7, 8] };
+const POSE_OF_CELL = ['poz-simitci', 'poz-usta', 'poz-cirak', 'poz-satici'];
+function chHead() { return CH.ready ? 2.3 * CH.k * CH.uStr.value + 0.25 : 1.85; }   // height over a worker's feet for tags
+function workerPose(w) { return POSE_OF_CELL[w.assign && w.assign.k === 'spot' ? CH_CELL.seller : CH_CELL.baker[w.id % 4]]; }
+// upright (cylindrical) billboard: turns only about the vertical axis, so a baker behind a table or near a wall does
+// not lean back into it; the height is stretched by 1/cos(camera elevation) to keep the figure's proportions
+const CH_VERT = `attribute vec3 iPos; attribute vec4 iPar; uniform float uCols; uniform vec3 uR; uniform vec3 uF; uniform float uStr; varying vec2 vUv;
+void main() {
+  vec2 c = position.xy;
+  float cs = cos(iPar.w), sn = sin(iPar.w);
+  c = vec2(c.x * cs - c.y * sn, c.x * sn + c.y * cs);
+  vec3 wp = iPos + uR * (c.x * iPar.x) + vec3(0.0, c.y * iPar.x * uStr, 0.0) + uF * (iPar.x * 0.12);
+  gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
+  float u = iPar.z > 0.0 ? uv.x : 1.0 - uv.x;
+  float col = mod(iPar.y, uCols), row = floor(iPar.y / uCols + 0.01);
+  vUv = vec2((col + u) / uCols, 1.0 - (row + 1.0 - uv.y) / uCols);
+}`;
+const CH_FRAG = `uniform sampler2D map; uniform float uLight; varying vec2 vUv;
+void main() {
+  vec4 c = texture2D(map, vUv);
+  if (c.a < 0.45) discard;
+  gl_FragColor = vec4(c.rgb * uLight, 1.0);
+  #include <colorspace_fragment>
+}`;
+let _shadowTex = null;
+function chLayer(tex, cols, N, shadow) {
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 2;
+  const L = { n: 0, N }, base = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), g = new THREE.InstancedBufferGeometry();
+  g.index = base.index; g.setAttribute('position', base.attributes.position); g.setAttribute('uv', base.attributes.uv);
+  L.pos = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3).setUsage(THREE.DynamicDrawUsage);
+  L.par = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4).setUsage(THREE.DynamicDrawUsage);
+  g.setAttribute('iPos', L.pos); g.setAttribute('iPar', L.par); g.instanceCount = 0;
+  L.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, uLight: CH.light, uCols: { value: cols }, uR: CH.uR, uF: CH.uF, uStr: CH.uStr }, vertexShader: CH_VERT, fragmentShader: CH_FRAG }));
+  L.mesh.frustumCulled = false; L.mesh.renderOrder = 1; scene.add(L.mesh);
+  if (shadow) {   // soft contact shadow under every figure
+    if (!_shadowTex) {
+      const sc = document.createElement('canvas'); sc.width = sc.height = 64;
+      const x = sc.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(50,25,8,0.5)'); gr.addColorStop(0.6, 'rgba(50,25,8,0.22)'); gr.addColorStop(1, 'rgba(50,25,8,0)');
+      x.fillStyle = gr; x.fillRect(0, 0, 64, 64); _shadowTex = new THREE.CanvasTexture(sc);
+    }
+    L.shadow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: _shadowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), N);
+    L.shadow.frustumCulled = false; L.shadow.count = 0; scene.add(L.shadow);
+  }
+  return L;
+}
+const _chR = new THREE.Vector3(), _chM = new THREE.Matrix4(), _chV = new THREE.Vector3(), _chQ = new THREE.Quaternion(), _chS = new THREE.Vector3();
+function chPush(L, x, y, z, yaw, cell, size, sway) {
+  if (!L || L.n >= L.N) return;
+  const i = L.n++, s = size * CH.k, face = Math.sin(yaw) * _chR.x + Math.cos(yaw) * _chR.z >= 0 ? 1 : -1;
+  L.pos.setXYZ(i, x, y, z); L.par.setXYZ(i, s, cell, face); L.par.setW(i, sway || 0);
+  if (L.shadow) { _chM.compose(_chV.set(x, y + 0.03, z), _chQ.identity(), _chS.set(s * 0.5, 1, s * 0.3)); L.shadow.setMatrixAt(i, _chM); }
+}
+function chFlush(L) {
+  L.mesh.geometry.instanceCount = L.n; L.pos.needsUpdate = true; L.par.needsUpdate = true;
+  if (L.shadow) { L.shadow.count = L.n; L.shadow.instanceMatrix.needsUpdate = true; }
+}
+function chibiFrame() {
+  // once per frame before staff and crowd: camera right vector for facing, phone scale, day/night light
+  if (!CH.ready) return;
+  _chR.setFromMatrixColumn(camera.matrixWorld, 0); _chR.y = 0; _chR.normalize();
+  CH.uR.value.copy(_chR); CH.uF.value.set(-_chR.z, 0, _chR.x);   // horizontal right and towards-camera vectors
+  CH.uStr.value = 1 / Math.max(0.35, Math.cos(cam.el));
+  // the farther the camera, the bigger the figures (a phone sits far back: about 1.7x), so a baker still reads;
+  // picking and paths do not change
+  CH.k = (camera.aspect < 1 ? 1.25 : 1) * (1 + 0.35 * clamp((cam.dist - 30) / 40, 0, 1));
+  CH.light.value = 1.06 - 0.5 * tod.night;
+  CH.fig.n = 0; CH.tray.n = 0;
+  for (const P of CH.props) P.material.color.setScalar(CH.light.value);
+}
+function chibiEnd() {
+  if (!CH.ready) return;
+  chFlush(CH.fig); chFlush(CH.tray);
+}
+function stilKur() {
+  // loads the style textures; everything three.js builds here uses the private random stream
+  if (Q.has('nostil')) return;   // ?nostil: the old drawn people and props (comparison / debugging)
+  sakin(() => {
+    const load = (p) => new Promise(res => new THREE.TextureLoader().load('assets/3d/' + p, t => res(t), undefined, () => res(null)));
+    Promise.all(['chibi.webp', 'tabla.webp', 'firin.webp', 'tezgah.webp'].map(load)).then(tx => {
+      if (tx.some(t => !t)) return; // a missing file keeps the old meshes
+      // oven and counter: upright cut-outs turned to the (fixed) camera heading, set a little behind the old model so
+      // the bread in the oven slots and the customers at the counter stay in front
+      CH.props = [];
+      const prop = (tex, w, h, x, y, z) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5 }));
+        m.rotation.y = 0.62; m.position.set(x - Math.sin(0.62), y, z - Math.cos(0.62)); scene.add(m); CH.props.push(m); return m;
+      };
+      const up = (t, an) => () => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = an; renderer.initTexture(t); };
+      // one GPU job every few frames (texture upload, then the objects whose shaders compile on their first draw):
+      // on a slow or busy GPU, uploading and compiling everything in one frame could lose the WebGL context
+      CH.queue = [
+        up(tx[0], 2), () => { CH.fig = chLayer(tx[0], 3, 100, true); },
+        up(tx[1], 2), () => { CH.tray = chLayer(tx[1], 1, 8, false); },
+        up(tx[2], 4), () => { CH.ovens = [0, 1].map(i => prop(tx[2], 4.4, 4.4, -8.4, FLOOR_Y + 0.05, i === 0 ? -0.6 : 3.0)); },
+        up(tx[3], 4), () => { CH.counter = prop(tx[3], 2.9, 3.6, 3.0, FLOOR_Y, 1.9); },
+        () => {
+          for (const o of world.ovenMeshes) o.visible = false;
+          if (world.parts.counter) world.parts.counter.visible = false;
+          for (const C of [world.staff, world.pub]) for (const m of C.meshes) m.visible = false;
+          trayMesh.visible = false;
+          CH.ready = true;
+        },
+      ];
+      CH.qt = 0;
+    });
+  });
+}
+function stilAdim() {
+  // runs the next queued style job (every 6th frame), inside the private random stream
+  if (!CH.queue || !CH.queue.length || renderer.getContext().isContextLost() || ++CH.qt % 6) return;   // never while the GPU context is lost
+  const job = CH.queue.shift(); sakin(job);
+}
 
 // ---------- rings (simit, pastries) ----------
 let ringMesh, trayMesh, ringCount = 0;
@@ -3308,7 +3472,7 @@ function initWorld(canvas) {
   // trays on sellers' heads
   trayMesh = new THREE.InstancedMesh(PERSON.tray, wmat.solid, 8); trayMesh.count = 0; trayMesh.frustumCulled = false; trayMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(trayMesh);
   const rg = new THREE.TorusGeometry(0.2, 0.078, 7, 14).rotateX(Math.PI / 2);
-  ringMesh = new THREE.InstancedMesh(rg, new THREE.MeshLambertMaterial({ map: sesameTexture() }), RING_MAX); ringMesh.count = 0; ringMesh.frustumCulled = false; ringMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); ringMesh.castShadow = true;
+  ringMesh = new THREE.InstancedMesh(rg, new THREE.MeshPhongMaterial({ map: sesameTexture(), shininess: 36, specular: 0x4a3418 })   /* stil-3d: glossy baked crust */, RING_MAX); ringMesh.count = 0; ringMesh.frustumCulled = false; ringMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); ringMesh.castShadow = true;
   ringMesh.setColorAt(0, new THREE.Color(1, 1, 1)); ringMesh.instanceColor.setUsage(THREE.DynamicDrawUsage); scene.add(ringMesh);
   // dough lump on the kneading table
   world.lump = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 7).scale(1, 0.55, 1), new THREE.MeshLambertMaterial({ color: 0xEBD7AB })); world.lump.castShadow = true; scene.add(world.lump);
@@ -3320,6 +3484,7 @@ function initWorld(canvas) {
   world.rain = new Particles(Math.round(520 * lowF), 0.22, 0xB8D4F0, false, 0.55);
   world.flour = new Particles(Math.round(70 * lowF), 0.2, 0xFFF1D6, false, 0.5);   // flour dust motes drifting in the light of the bakery
   world.steamUp = new Particles(Math.round(50 * lowF), 0.8, 0xFFF6E8, false, 0.28);   // steam from the baked simit
+  stilKur();
   world.ready = true;
   // hit proxies (invisible boxes, picked by the raycaster)
   const hm = new THREE.MeshBasicMaterial({ visible: false });
@@ -3425,7 +3590,12 @@ function updateStaff(dt, vdt) {
     } else if (mode === 'sell') { const c = Math.max(0, Math.sin(simTime * 1.7 + w.id)); bob = c > 0.9 ? 0.1 : 0; lean = -0.05; }
     if (!a.moving && bob === 0) { bob = (0.5 + 0.5 * Math.sin(simTime * 2.1 + w.id * 1.7)) * 0.025; roll = Math.sin(simTime * 0.9 + w.id) * 0.025; }   // idle breathing
     C.put(a.x, y, a.z, a.yaw, lean, 1, a.clothes, a.skin, w.assign && w.assign.k === 'spot' ? COL.blue : 0xFFFFFF, bob, APRONS[w.id % APRONS.length], roll);
-    if (w.assign && w.assign.k === 'spot' && w.s && trayCount(w) > 0 && trays < 8) {
+    const seller = w.assign && w.assign.k === 'spot';
+    if (CH.ready) {
+      const sway = roll * 2.2 - (mode === 'work' ? (lean - 0.04) * 0.4 : 0);
+      chPush(CH.fig, a.x, y + bob * 1.4, a.z, a.yaw, seller ? CH_CELL.seller : CH_CELL.baker[w.id % 4], 2.3, sway);
+      if (seller && w.s && trayCount(w) > 0) chPush(CH.tray, a.x, y + bob * 1.4 + 2.3 * CH.k * CH.uStr.value * 0.93, a.z, 0, 0, 1.45, sway);
+    } else if (seller && w.s && trayCount(w) > 0 && trays < 8) {
       _rm.compose(_rp.set(a.x, y + bob + 1.66, a.z), _rq.identity(), _rs.set(1, 1, 1)); trayMesh.setMatrixAt(trays++, _rm);
       trayMesh.count = trays;
       const n = Math.min(7, Math.ceil(trayCount(w) / 4));
@@ -3439,7 +3609,7 @@ function lerpAngle(a, b, k) { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.
 // ---------- street crowd ----------
 const crowd = [];
 function initCrowd() {
-  for (let i = 0; i < 80; i++) crowd.push({ on: false, x: 0, z: 0, yaw: 0, path: [], pi: 0, sp: 1.6, pause: 0, ph: rr() * 6, clothes: CLOTHES[i % CLOTHES.length], skin: SKINS[i % SKINS.length], hat: null, kind: 'amb' });
+  for (let i = 0; i < 80; i++) crowd.push({ ci: i, on: false, x: 0, z: 0, yaw: 0, path: [], pi: 0, sp: 1.6, pause: 0, ph: rr() * 6, clothes: CLOTHES[i % CLOTHES.length], skin: SKINS[i % SKINS.length], hat: null, kind: 'amb' });
   for (let i = 0; i < 16; i++) { const c = crowd[i]; c.on = true; c.kind = 'amb'; c.x = 5 + rr() * 3; c.z = -14 + rr() * 26; c.dir = rr() < 0.5 ? 1 : -1; c.sp = 1.0 + rr() * 0.8; c.lane = 5.2 + rr() * 2.6; c.hat = rr() < 0.3 ? 0xB3261E : null; }
 }
 function spawnCustomer(spot, big) {
@@ -3469,6 +3639,7 @@ function updateCrowd(vdt) {
     }
     const idleB = (0.5 + 0.5 * Math.sin(simTime * 2.3 + c.ph * 0.37)) * 0.022;
     C.put(c.x, standY(c.x, c.z), c.z, c.yaw + (moving ? 0 : Math.sin(simTime * 0.8 + c.ph) * 0.18), moving ? 0.05 : 0, 0.92 + (c.skin % 5) * 0.015, c.clothes, c.skin, c.hat, moving ? Math.abs(Math.sin(c.ph)) * 0.06 : idleB, undefined, moving ? Math.sin(c.ph) * 0.05 : 0);
+    if (CH.ready) chPush(CH.fig, c.x, standY(c.x, c.z) + (moving ? Math.abs(Math.sin(c.ph)) * 0.09 : idleB), c.z, c.yaw, CH_CELL.cust[c.ci % 5], 2.0 + (c.ci % 3) * 0.08, moving ? Math.sin(c.ph) * 0.09 : 0);
   }
   C.end();
 }
@@ -3578,7 +3749,7 @@ function spawnFloatingMoney(spot, amount, whoId) {
   if (whoId && agents && agents.has(whoId)) {
     const a = agents.get(whoId);
     if (a) {
-      _moneyV.set(a.x, standY(a.x, a.z) + 1.85, a.z).project(camera);
+      _moneyV.set(a.x, standY(a.x, a.z) + chHead(), a.z).project(camera);
       if (_moneyV.z < 1) {
         sx = (_moneyV.x * 0.5 + 0.5) * window.innerWidth;
         sy = (-_moneyV.y * 0.5 + 0.5) * window.innerHeight;
@@ -3724,7 +3895,7 @@ function updateLabels(refreshText) {
       if (wl) {
         const a = agents.get(wk.id);
         if (a) {
-          _v.set(a.x, standY(a.x, a.z) + 1.85, a.z).project(camera);
+          _v.set(a.x, standY(a.x, a.z) + chHead(), a.z).project(camera);   // stil-3d: the tag floats over the taller chibi
           const vis = _v.z < 1 && Math.abs(_v.x) < 1.15 && Math.abs(_v.y) < 1.15;
           wl.el.style.display = vis ? '' : 'none';
           if (vis) _lblPlace.push({ el: wl.el, wl, x: (_v.x * 0.5 + 0.5) * w, y: (-_v.y * 0.5 + 0.5) * h });
@@ -3789,7 +3960,7 @@ function updateScenery(vdt) {
     if (gold) { g.material.opacity = RM ? 1 : 0.85 + 0.15 * Math.sin(simTime * 10); if (RM) g.scale.set(1.15, 1.15, 1); }
   });
   if (world.ovenLight) { world.ovenLight.intensity = (4 + 26 * hot) * flick * (1 - tod.night * 0.0); world.ovenLight.position.z = S.oven.count > 1 ? 1.2 : -0.6; world.ovenLight.distance = S.oven.count > 1 ? 15 : 12; }
-  world.ovenMeshes[1].visible = S.oven.count > 1; world.hit.oven2.visible = S.oven.count > 1;
+  world.ovenMeshes[1].visible = S.oven.count > 1 && !CH.ready; if (CH.ready) CH.ovens[1].visible = S.oven.count > 1; world.hit.oven2.visible = S.oven.count > 1;
   if (vdt > 0) {
     const lowF = lowQ() ? 0.5 : 1;
     for (let oi = 0; oi < S.oven.count; oi++) {
@@ -4213,7 +4384,8 @@ function hudUpdate(force) {
 }
 function applyLang() {
   document.documentElement.lang = settings.lang; document.title = 'Simit Fırını'; if (window.Arena) Arena.lang(settings.lang);
-  $('brand').innerHTML = LOGO(34) + '<span>Simit Fırını</span>'; $('tLogo').innerHTML = LOGO(150);
+  // stil-3d: the song video's simit seller and tourist girl with a 3D simit stand on the title card instead of the drawn logo
+  $('brand').innerHTML = img3('urun-simit') + '<span>Simit Fırını</span>'; $('tLogo').className = 'logo logo3'; $('tLogo').innerHTML = img3('poz-simitci') + img3('urun-simit', 'simit') + img3('poz-turist');
   $('tTag').textContent = t('tag'); $('tBunting').innerHTML = buntingSvg();
   $('tHow').innerHTML = '<li>' + t('how1') + '</li><li>' + t('how2') + '</li><li>' + t('how3', GOAL_DAY, money(GOAL_LIRA), GOAL_REP) + '</li><li>' + t('how5') + '</li><li>' + t('how4') + '</li>';
   $('bPlay').textContent = t('play'); $('bCont').textContent = t('cont'); $('bSet').innerHTML = ic('gear') + '<span>' + t('settings') + '</span>'; $('bLangT').innerHTML = ic('globe') + '<span>' + t('langName') + '</span>';
@@ -4293,7 +4465,7 @@ function renderSide(force) {
   const closeBtn = '<button class="btn icon close" data-act="deselect" aria-label="' + t('close') + '" data-k="deselect">' + ic('close') + '</button>';
   if (ui.selWorker) {
     const w = S.workers.find(x => x.id === ui.selWorker); if (!w) { ui.selWorker = 0; return renderSide(); }
-    h = '<div class="row"><h2>' + ic('people') + ' ' + wName(w) + '</h2>' + closeBtn + '</div><div class="sub">' + t('worker_card') + '</div>' + workerRow(w, true);
+    h = '<div class="row"><h2>' + img3(workerPose(w)) + ' ' + wName(w) + '</h2>' + closeBtn + '</div><div class="sub">' + t('worker_card') + '</div>' + workerRow(w, true);
     h += '<h3>' + t('assign_to') + '</h3><div class="row wrap" style="margin-top:6px">';
     for (const st of [...STATION_IDS, 'oven']) {
       const isCur = w.assign && w.assign.k === 'station' && w.assign.id === st;
@@ -4309,7 +4481,7 @@ function renderSide(force) {
   } else if (sel.kind === 'station') {
     const id = sel.id, isOven = id === 'oven', sn = isOven ? S.oven : S.stn[id], ws = workersAt('station', id), idle = S.workers.filter(w => !w.assign);
     const flag = isOven ? (sn.flag === 'full' ? t('fl_full') : t('fl_ok')) : sn.flag === 'noing' ? t('fl_noing', t('i_' + (sn.ing || 'flour'))) : t('fl_' + sn.flag);
-    h = '<div class="row"><h2>' + ic(isOven ? 'oven' : 'dough') + ' ' + t('st_' + id) + '</h2>' + closeBtn + '</div>';
+    h = '<div class="row"><h2>' + (isOven ? img3('firin') : id === 'knead' ? img3('un') : ic('dough')) + ' ' + t('st_' + id) + '</h2>' + closeBtn + '</div>';
     h += '<div class="row wrap" style="margin-top:6px"><span class="tag ' + ((isOven ? sn.flag === 'full' : sn.flag === 'ok') ? 'good' : sn.flag === 'noing' ? 'bad' : 'warn') + '">' + flag + '</span><span class="tag">' + t('level', sn.lvl) + '</span></div>';
     const rate = isOven ? pullRate() : stationRate(id);
     h += '<div class="kv" style="margin-top:8px"><span>' + t('rate') + '</span><b>' + t('per_min', num(rate * 60)) + '</b>';
@@ -4339,7 +4511,7 @@ function renderSide(force) {
     } else { const c = stationCostNext(id); h += '<div class="row sp"><span>' + t('upg_station', t('st_' + id)) + ' · ' + t('level', sn.lvl) + '</span>' + (c === null ? '<span class="tag good">' + t('maxed') + '</span>' : btn('upg', 'station', id, ic('up') + money(c), '', S.lira < c)) + '</div>'; }
   } else if (sel.kind === 'spot') {
     const id = sel.id, d = DATA.spots[id], hr = S.phase === 'day' ? hourNow() : 8;
-    h = '<div class="row"><h2>' + ic(SPOT_ICON[id]) + ' ' + t('sp_' + id) + '</h2>' + closeBtn + '</div>';
+    h = '<div class="row"><h2>' + (id === 'shop' ? img3('tezgah') : ic(SPOT_ICON[id])) + ' ' + t('sp_' + id) + '</h2>' + closeBtn + '</div>';
     const lam = spotLambda(id, S.phase === 'day' ? hr : 8) * SEC_PER_HOUR;
     h += '<div class="kv" style="margin-top:8px"><span>' + t('demand_now') + '</span><b>' + t('per_hr', num(lam)) + '</b></div><canvas class="chart" id="spotChart" width="300" height="80" style="height:80px;margin-top:6px"></canvas>';
     if (id === 'shop') {
@@ -4352,8 +4524,8 @@ function renderSide(force) {
       if (sl.length < d.max) h += '<div class="row wrap" style="margin-top:6px">' + (idle.map(w => btn('toSpot', w.id, id, ic('plus') + w.name)).join('') || '<span class="muted">' + t('no_idle') + '</span>') + '</div>';
     }
   } else if (sel.kind === 'rack') {
-    h = '<div class="row"><h2>' + ic('rack') + ' ' + t('racks') + '</h2>' + closeBtn + '</div><div class="kv" style="margin-top:8px"><span>' + t('stock_title') + '</span><b>' + rackTotal() + ' / ' + rackCap() + '</b></div><div class="bar" style="margin:6px 0 10px"><i style="width:' + (rackTotal() / rackCap() * 100) + '%"></i></div>';
-    h += '<table class="t"><tr><th>' + t('col_product') + '</th><th>' + t('col_stock') + '</th><th>' + t('target_short') + '</th></tr>' + unlockedList().map(p => '<tr><td>' + t('p_' + p) + '</td><td>' + S.racks[p] + '</td><td>' + S.target[p] + '</td></tr>').join('') + '</table>';
+    h = '<div class="row"><h2>' + img3('tabla') + ' ' + t('racks') + '</h2>' + closeBtn + '</div><div class="kv" style="margin-top:8px"><span>' + t('stock_title') + '</span><b>' + rackTotal() + ' / ' + rackCap() + '</b></div><div class="bar" style="margin:6px 0 10px"><i style="width:' + (rackTotal() / rackCap() * 100) + '%"></i></div>';
+    h += '<table class="t"><tr><th>' + t('col_product') + '</th><th>' + t('col_stock') + '</th><th>' + t('target_short') + '</th></tr>' + unlockedList().map(p => '<tr><td>' + pIcon(p) + t('p_' + p) + '</td><td>' + S.racks[p] + '</td><td>' + S.target[p] + '</td></tr>').join('') + '</table>';
     h += '<div class="row" style="margin-top:8px">' + btn('plan', '', '', ic('chart') + t('plan')) + '</div>';
   }
   setHTML(el, h);
@@ -4418,10 +4590,10 @@ function planTab() {
       const d = DATA.products[p];
       if (!S.unlocked[p]) {
         const locked = S.day < d.day;
-        h += '<tr><td>' + t('p_' + p) + '</td><td colspan="3" style="text-align:left" class="muted">' + (locked ? ic('lock') + ' ' + t('unlock_day', d.day) : btn('recipe', p, '', ic('plus') + t('unlock', money(d.cost)), '', S.lira < d.cost)) + '</td><td></td></tr>'; continue;
+        h += '<tr><td>' + pIcon(p) + t('p_' + p) + '</td><td colspan="3" style="text-align:left" class="muted">' + (locked ? ic('lock') + ' ' + t('unlock_day', d.day) : btn('recipe', p, '', ic('plus') + t('unlock', money(d.cost)), '', S.lira < d.cost)) + '</td><td></td></tr>'; continue;
       }
       const c = costOf(p), mg = S.sell[p] - c;
-      h += '<tr><td><b>' + t('p_' + p) + '</b></td><td data-l="' + t('col_cost') + '">' + money1(c) + '</td><td data-l="' + t('col_price') + '"><span class="stepper">' + btn('price', p, -0.5, ic('minus')) + '<b>' + money1(S.sell[p]) + '</b>' + btn('price', p, 0.5, ic('plus')) + '</span><div class="muted ' + (mg < 0 ? 'up' : '') + '">' + t('margin', money1(mg)) + '</div></td><td data-l="' + t('col_target') + '"><span class="stepper">' + btn('target', p, -10, ic('minus')) + '<b>' + S.target[p] + '</b>' + btn('target', p, 10, ic('plus')) + '</span></td><td data-l="' + t('col_stock') + '">' + S.racks[p] + '</td></tr>';
+      h += '<tr><td>' + pIcon(p) + '<b>' + t('p_' + p) + '</b></td><td data-l="' + t('col_cost') + '">' + money1(c) + '</td><td data-l="' + t('col_price') + '"><span class="stepper">' + btn('price', p, -0.5, ic('minus')) + '<b>' + money1(S.sell[p]) + '</b>' + btn('price', p, 0.5, ic('plus')) + '</span><div class="muted ' + (mg < 0 ? 'up' : '') + '">' + t('margin', money1(mg)) + '</div></td><td data-l="' + t('col_target') + '"><span class="stepper">' + btn('target', p, -10, ic('minus')) + '<b>' + S.target[p] + '</b>' + btn('target', p, 10, ic('plus')) + '</span></td><td data-l="' + t('col_stock') + '">' + S.racks[p] + '</td></tr>';
     }
     h += '</table>' + proofHtml() + '<p class="muted">' + t('proof_note') + '</p><p class="muted">' + t('hint_target') + '</p>';
   } else if (tab === 'supply') {
@@ -4756,7 +4928,8 @@ function showEnd(res) {
   if (unlockedList().length === PRODUCT_IDS.length) arenaAward('menu', 'aw_menu');
   const title = res === 'won' ? t('win_title') : res === 'bankrupt' ? t('lose_title') : t('time_title');
   const text = res === 'won' ? t('win_text', S.day, money(S.lira), S.rep.toFixed(1)) : res === 'bankrupt' ? t('lose_text') : t('time_text', S.day, money(S.lira), S.rep.toFixed(1));
-  let h = '<div style="text-align:center"><div class="logo">' + LOGO(res === 'won' ? 110 : 90) + '</div><h1>' + title + '</h1><p class="sub">' + text + '</p>' + (rec ? '<p class="newrec">' + ic('star') + ' ' + t('new_record') + '</p>' : '') + '</div>';
+  const fig = res === 'won' ? img3('poz-simitci') + img3('tabla', 'simit') + img3('poz-turist') : res === 'bankrupt' ? img3('poz-usta') + img3('un', 'simit') : img3('poz-simitci') + img3('urun-simit', 'simit');
+  let h = '<div style="text-align:center"><div class="endfig">' + fig + '</div><h1>' + title + '</h1><p class="sub">' + text + '</p>' + (rec ? '<p class="newrec">' + ic('star') + ' ' + t('new_record') + '</p>' : '') + '</div>';
   h += '<div class="statgrid"><div class="stat"><div class="v">' + S.day + '</div><div class="k">' + t('days_played') + '</div></div><div class="stat"><div class="v">' + money(S.lira) + '</div><div class="k">' + t('lira') + '</div></div><div class="stat"><div class="v">' + S.rep.toFixed(1) + '</div><div class="k">' + t('stars') + '</div></div></div>';
   if (dailyLine) h += '<p class="sub" style="text-align:center" id="enDaily">' + dailyLine + '</p>';
   const others = window.Arena ? Arena.games.filter(g => g !== 'simit-firini') : [];
@@ -4954,6 +5127,7 @@ window.simitfirini = {
   get cam() { return cam; }, get fps() { return Math.round(fpsEma); }, get calls() { return renderer ? renderer.info.render.calls : 0; }, get tris() { return renderer ? renderer.info.render.triangles : 0; },
   get errors() { return window.__errors; }, get missingText() { return window.__missing || []; }, bot: botPlan,
   get reducedMotion() { return RM; },
+  get stil3d() { return CH.ready; },   // stil-3d: the sprite textures are loaded
   spawnFloatingMoney, triggerBurnAlarm, get burnAlarm() { return burnOn; },
   tut: {
     get active() { return tutActive; },
@@ -5043,8 +5217,10 @@ function frame(now) {
   const vdt = ui.paused || (ui.inGame && modalBlocking() && !open$('title')) ? 0 : (running ? dtReal * Math.min(ui.speed, 2) : (ui.inGame ? dtReal : dtReal));
   if (!ui.inGame) { titleAng += dtReal; cam.az = 0.62 + Math.sin(titleAng * 0.12) * 0.12; placeCamera(); }
   updateScenery(vdt);
+  stilAdim(); chibiFrame();
   updateStaff(dtReal, vdt);
   updateCrowd(vdt);
+  chibiEnd();
   ringAcc += dtReal; if (ringAcc > 0.1) { ringAcc = 0; updateRings(); }
   hudAcc += dtReal; if (hudAcc > 0.25) { hudAcc = 0; hudUpdate(false); updateLabels(true); renderSideFast(); }
   else updateLabels(false);
