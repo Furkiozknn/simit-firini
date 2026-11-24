@@ -889,6 +889,12 @@ img.f3 { display: block; object-fit: contain; filter: drop-shadow(0 6px 8px rgba
 .endfig { display: flex; justify-content: center; align-items: flex-end; height: 110px; }
 .endfig img.f3 { height: 100%; width: auto; }
 .endfig img.f3.simit { height: 42%; margin: 0 -4px 4px; }
+.modal h1 img.f3.big { height: 2.5em; margin: -10px 4px 4px -2px; }
+.toast img.f3 { display: inline-block; height: 2.1em; width: auto; flex: none; margin: -6px 2px -6px -4px; }
+.sadfx { position: absolute; width: 0; pointer-events: none; z-index: 14; animation: sadUp 2.6s ease-out forwards; }
+.sadfx img { position: absolute; left: -26px; bottom: 0; height: 74px; width: auto; filter: drop-shadow(0 4px 6px rgba(30, 12, 2, .5)); }
+@keyframes sadUp { 0% { opacity: 0; transform: translateY(8px) scale(.85); } 12% { opacity: 1; transform: translateY(0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .sadfx { animation-duration: 0.01s; animation-delay: 2.2s; } }
 .panel h2 img.f3, .modal h1 img.f3 { display: inline-block; height: 1.6em; width: auto; vertical-align: -0.45em; margin: -6px 2px -4px -2px; filter: drop-shadow(0 2px 3px rgba(30, 12, 2, .35)); }
 img.pi3 { display: inline-block; width: 26px; height: 22px; object-fit: contain; vertical-align: -6px; margin-right: 5px; filter: drop-shadow(0 1px 2px rgba(30, 12, 2, .35)); }
 @media (max-width: 900px) { #title .logo3 { height: 105px; } .endfig { height: 92px; } }
@@ -2732,6 +2738,7 @@ G.half = prepGeo(new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI /
 const _yr = new WeakMap();
 function baseRange(g) { let r = _yr.get(g); if (!r) { g.computeBoundingBox(); const b = g.boundingBox; r = [b.min.y, Math.max(1e-4, b.max.y - b.min.y)]; _yr.set(g, r); } return r; }
 function Collector() {
+  let tid = 0;   // cila: surface id of the next parts (0 plain, 1 roof tiles, 2 plaster, 3 wood floor) for the clay texture shader
   const geos = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color();
   const api = {
     add(base, col, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, jit = 0.022) {
@@ -2743,12 +2750,13 @@ function Collector() {
         const t = clamp((py.getY(i) - yr[0]) / yr[1], 0, 1), k = 0.74 + 0.30 * t;
         arr[i * 3] = c.r * k * (0.98 + 0.05 * t); arr[i * 3 + 1] = c.g * k; arr[i * 3 + 2] = c.b * k * (1.0 - 0.05 * t);
       }
-      g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g); return api;
+      g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); g.setAttribute('tid', new THREE.BufferAttribute(new Float32Array(n).fill(tid), 1)); geos.push(g); return api;
     },
     box(w, h, d, col, x, y, z, ry = 0, rx = 0, rz = 0) { return api.add(G.box, col, x - 0, y, z, w, h, d, rx, ry, rz); },
     cyl(r, h, col, x, y, z, seg6) { return api.add(seg6 ? G.cyl6 : G.cyl, col, x, y, z, r, h, r); },
     cone(r, h, col, x, y, z) { return api.add(G.cone, col, x, y, z, r, h, r); },
-    pyr(w, d, h, col, x, y, z, ry = 0) { return api.add(G.pyr, col, x, y, z, w / 1.4142, h, d / 1.4142, 0, ry, 0); },
+    pyr(w, d, h, col, x, y, z, ry = 0) { const t0 = tid; tid = 1; api.add(G.pyr, col, x, y, z, w / 1.4142, h, d / 1.4142, 0, ry, 0); tid = t0; return api; },
+    surf(id, fn) { const t0 = tid; tid = id; fn(); tid = t0; return api; },
     sph(r, col, x, y, z, sy = 1) { return api.add(G.sph, col, x, y, z, r, r * sy, r); },
     ico(r, col, x, y, z, sy = 1) { return api.add(G.ico, col, x, y, z, r, r * sy, r, rr() * 3, rr() * 3, 0); },
     half(r, col, x, y, z, sy = 1) { return api.add(G.half, col, x, y, z, r, r * sy, r); },
@@ -2807,7 +2815,7 @@ function buildGroundMesh() {
 function addStaticBuildings(C, Wn) {
   const house = (x, z, w, d, h, wall, roof, floors, tilt) => {
     const y0 = streetY(z) - 0.3, fx = x - w / 2;   // fx = x of the street-facing wall
-    C.box(w, h + 0.3, d, wall, x, y0, z);
+    C.surf(2, () => C.box(w, h + 0.3, d, wall, x, y0, z));   // cila: plaster
     C.box(0.4, h + 0.3, 0.4, COL.cream, x + w / 2 - 0.12, y0, z + d / 2 - 0.12);            // pale painted corner post
     C.box(w + 0.7, 0.22, d + 0.7, COL.woodD, x, y0 + h + 0.2, z);                         // eaves board
     C.pyr(w + 0.9, d + 0.9, Math.min(w, d) * 0.55, roof, x, y0 + h + 0.42, z);
@@ -2849,8 +2857,8 @@ function addStaticBuildings(C, Wn) {
   house(13.4, -6.2, 6.0, 5.6, 5.4, 0xC9CFD6, COL.stoneD, 3);
   C.box(1.4, 0.7, 0.2, COL.blue, 10.36, streetY(-6.2) + 1.1, -6.2);
   // --- school ---
-  C.box(9.2, 3.4, 5.0, 0xE3B66B, -8.2, 0.4, -15.5); C.pyr(9.9, 5.6, 1.8, COL.roof, -8.2, 3.8, -15.5);
-  C.box(2.0, 4.6, 2.0, 0xD9A24E, -5.6, 0.4, -12.7); C.pyr(2.5, 2.5, 1.4, COL.roofD, -5.6, 5.0, -12.7);
+  C.surf(2, () => C.box(9.2, 3.4, 5.0, 0xE3B66B, -8.2, 0.4, -15.5)); C.pyr(9.9, 5.6, 1.8, COL.roof, -8.2, 3.8, -15.5);
+  C.surf(2, () => C.box(2.0, 4.6, 2.0, 0xD9A24E, -5.6, 0.4, -12.7)); C.pyr(2.5, 2.5, 1.4, COL.roofD, -5.6, 5.0, -12.7);
   for (let i = 0; i < 4; i++) Wn.box(0.9, 1.0, 0.1, 0xBFD9E8, -11.2 + i * 1.9, 1.8, -12.95);
   C.cyl(0.07, 5.2, 0xDDDDDD, -3.6, 0.1, -11.0); C.box(1.2, 0.75, 0.05, COL.red, -3.0, 4.5, -11.0); C.cyl(0.18, 0.03, 0xFFFFFF, -3.15, 4.8, -10.97);
   // --- park: trees, benches, fountain ---
@@ -2873,9 +2881,9 @@ function addStaticBuildings(C, Wn) {
   const hc = [0xE7C79B, 0xD9A66E, 0xE9D7B0, 0xC9B08A, 0xD98E6A];
   for (let i = 0; i < 18; i++) {
     const hx = -26 + (i % 9) * 6 + rr() * 2, hz = -26 - Math.floor(i / 9) * 5 + rr() * 2, hy = 2 + (hz < -26 ? 1.5 : 0) + rr();
-    C.box(2.6, 2.4, 2.4, hc[i % 5], hx, hy, hz); C.pyr(3.1, 2.9, 1.2, i % 3 ? COL.roof : COL.roofD, hx, hy + 2.4, hz);
+    C.surf(2, () => C.box(2.6, 2.4, 2.4, hc[i % 5], hx, hy, hz)); C.pyr(3.1, 2.9, 1.2, i % 3 ? COL.roof : COL.roofD, hx, hy + 2.4, hz);
   }
-  for (let i = 0; i < 7; i++) { const hx = 18 + i * 3.2, hz = -22 - (i % 2) * 4; C.box(2.8, 2.6, 2.6, hc[(i + 2) % 5], hx, 1.8 + (i % 3) * 0.4, hz); C.pyr(3.3, 3.1, 1.3, COL.roof, hx, 4.4 + (i % 3) * 0.4, hz); }
+  for (let i = 0; i < 7; i++) { const hx = 18 + i * 3.2, hz = -22 - (i % 2) * 4; C.surf(2, () => C.box(2.8, 2.6, 2.6, hc[(i + 2) % 5], hx, 1.8 + (i % 3) * 0.4, hz)); C.pyr(3.3, 3.1, 1.3, COL.roof, hx, 4.4 + (i % 3) * 0.4, hz); }
 }
 
 function addBakery(C, Wn) {
@@ -2883,12 +2891,12 @@ function addBakery(C, Wn) {
   C.box(14.7, 1.9, 11.7, COL.stoneD, -3.45, -1.55, -0.95);
   for (let ix = 0; ix < 7; ix++) for (let iz = 0; iz < 6; iz++) {
     const x = -10.4 + ix * 2.0, z = -6.4 + iz * 1.85;
-    C.box(2.0, 0.05, 1.85, (ix + iz) % 2 ? 0xEBD3A0 : 0xCFA468, x + 1.0, FLOOR_Y - 0.05, z, 0, 0, 0);
+    C.surf(3, () => C.box(2.0, 0.05, 1.85, (ix + iz) % 2 ? 0xEBD3A0 : 0xCFA468, x + 1.0, FLOOR_Y - 0.05, z, 0, 0, 0));   // cila: wood planks
     if ((ix * 3 + iz * 5) % 7 === 0) C.box(0.7, 0.06, 0.7, COL.tile, x + 1.0, FLOOR_Y - 0.045, z, Math.PI / 4);   // blue diamond inlays
   }
   // walls: brick wainscot + plaster
-  C.box(14.3, 1.3, 0.4, COL.brick, -3.45, FLOOR_Y, -6.5); C.box(14.3, 3.5, 0.4, COL.plaster, -3.45, FLOOR_Y + 1.3, -6.5);
-  C.box(0.4, 1.3, 11.2, COL.brick, -10.5, FLOOR_Y, -0.95); C.box(0.4, 3.5, 11.2, COL.plaster, -10.5, FLOOR_Y + 1.3, -0.95);
+  C.box(14.3, 1.3, 0.4, COL.brick, -3.45, FLOOR_Y, -6.5); C.surf(2, () => C.box(14.3, 3.5, 0.4, COL.plaster, -3.45, FLOOR_Y + 1.3, -6.5));
+  C.box(0.4, 1.3, 11.2, COL.brick, -10.5, FLOOR_Y, -0.95); C.surf(2, () => C.box(0.4, 3.5, 11.2, COL.plaster, -10.5, FLOOR_Y + 1.3, -0.95));
   C.box(0.5, 4.8, 0.5, COL.woodD, 3.55, FLOOR_Y, -6.5); C.box(0.5, 4.8, 0.5, COL.woodD, 3.55, FLOOR_Y, 4.55); C.box(0.5, 4.8, 0.5, COL.woodD, -10.5, FLOOR_Y, 4.55);
   C.box(0.35, 1.1, 2.8, COL.brick, 3.5, FLOOR_Y, -4.9); C.box(0.35, 1.1, 6.0, COL.brick, 3.5, FLOOR_Y, 0.4);
   C.box(0.5, 0.35, 11.4, COL.woodD, 3.55, FLOOR_Y + 4.5, -0.95); C.box(14.8, 0.35, 0.5, COL.woodD, -3.45, FLOOR_Y + 4.5, -6.5);
@@ -3260,19 +3268,19 @@ function chibiFrame() {
   // picking and paths do not change
   CH.k = (camera.aspect < 1 ? 1.25 : 1) * (1 + 0.35 * clamp((cam.dist - 30) / 40, 0, 1));
   CH.light.value = 1.06 - 0.5 * tod.night;
-  CH.fig.n = 0; CH.tray.n = 0;
+  CH.fig.n = 0; CH.tray.n = 0; CH.sad.n = 0;
   for (const P of CH.props) P.material.color.setScalar(CH.light.value);
 }
 function chibiEnd() {
   if (!CH.ready) return;
-  chFlush(CH.fig); chFlush(CH.tray);
+  chFlush(CH.fig); chFlush(CH.tray); chFlush(CH.sad);
 }
 function stilKur() {
   // loads the style textures; everything three.js builds here uses the private random stream
   if (Q.has('nostil')) return;   // ?nostil: the old drawn people and props (comparison / debugging)
   sakin(() => {
     const load = (p) => new Promise(res => new THREE.TextureLoader().load('assets/3d/' + p, t => res(t), undefined, () => res(null)));
-    Promise.all(['chibi.webp', 'tabla.webp', 'firin.webp', 'tezgah.webp'].map(load)).then(tx => {
+    Promise.all(['chibi.webp', 'tabla.webp', 'firin.webp', 'tezgah.webp', 'uzgun.webp', 'dok-roof.webp', 'dok-wall.webp', 'dok-floor.webp', 'dok-cobble.webp'].map(load)).then(tx => {
       if (tx.some(t => !t)) return; // a missing file keeps the old meshes
       // oven and counter: upright cut-outs turned to the (fixed) camera heading, set a little behind the old model so
       // the bread in the oven slots and the customers at the counter stay in front
@@ -3289,6 +3297,13 @@ function stilKur() {
         up(tx[1], 2), () => { CH.tray = chLayer(tx[1], 1, 8, false); },
         up(tx[2], 4), () => { CH.ovens = [0, 1].map(i => prop(tx[2], 4.4, 4.4, -8.4, FLOOR_Y + 0.05, i === 0 ? -0.6 : 3.0)); },
         up(tx[3], 4), () => { CH.counter = prop(tx[3], 2.9, 3.6, 3.0, FLOOR_Y, 1.9); },
+        // cila: the sad simitçi poses (2x2 sheet) as a second sprite layer, used while the oven alarm is on
+        up(tx[4], 2), () => { CH.sad = chLayer(tx[4], 2, 12, true); },
+        // cila: clay surface textures for the roofs, plaster walls, bakery floor and the cobblestone street
+        ...[[5, 'roof'], [6, 'wall'], [7, 'floor'], [8, 'cob']].map(([i, k]) => () => {
+          const t = tx[i]; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; renderer.initTexture(t);
+          if (k === 'cob') (PT.cob = PT.cob || { value: wmat.cobble }).value = t; else PT[k].value = t;
+        }),
         () => {
           for (const o of world.ovenMeshes) o.visible = false;
           if (world.parts.counter) world.parts.counter.visible = false;
@@ -3364,21 +3379,33 @@ function grassTexture() {
   });
 }
 // Triplanar painted texture on world position: no UVs needed, works for merged and instanced geometry.
+// cila: clay surface textures (cobblestone, roof tiles, plaster, wood planks). The uniforms are shared and hold a 1x1 white
+// texture until the real ones are loaded by the style queue (stilKur), so the shaders never change after the first compile.
+const PT = {};
+function ptInit() { const w = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); w.needsUpdate = true; for (const k of ['roof', 'wall', 'floor']) PT[k] = { value: w }; }
 function paintify(mat, key, opts) {
   opts = opts || {};
-  mat.customProgramCacheKey = () => 'paint-' + key;
+  mat.customProgramCacheKey = () => 'paint-' + key + (opts.tex ? '-tex' : '');
   mat.onBeforeCompile = sh => {
     sh.uniforms.tPaint = { value: wmat.brush }; sh.uniforms.uAmt = { value: opts.amt === undefined ? 0.6 : opts.amt }; sh.uniforms.uScale = { value: opts.scale || 0.31 };
-    if (opts.ground) { sh.uniforms.tCob = { value: wmat.cobble }; sh.uniforms.tGrass = { value: wmat.grass }; }
+    if (opts.ground) { PT.cob = PT.cob || { value: wmat.cobble }; sh.uniforms.tCob = PT.cob; sh.uniforms.tGrass = { value: wmat.grass }; }
+    if (opts.tex) { sh.uniforms.tRoof = PT.roof; sh.uniforms.tWall = PT.wall; sh.uniforms.tFloor = PT.floor; }
     const NL = '\n';
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', ['#include <common>', 'varying vec3 vPW; varying vec3 vPN;'].join(NL))
-      .replace('#include <project_vertex>', ['#include <project_vertex>', 'vec4 pwp = vec4(transformed, 1.0); vec3 pnn = objectNormal;', '#ifdef USE_INSTANCING', 'pwp = instanceMatrix * pwp; pnn = mat3(instanceMatrix) * pnn;', '#endif', 'vPW = (modelMatrix * pwp).xyz; vPN = normalize(mat3(modelMatrix) * pnn);'].join(NL));
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', ['#include <common>', 'varying vec3 vPW; varying vec3 vPN;', opts.tex ? 'attribute float tid; varying float vT;' : ''].join(NL))
+      .replace('#include <project_vertex>', ['#include <project_vertex>', 'vec4 pwp = vec4(transformed, 1.0); vec3 pnn = objectNormal;', '#ifdef USE_INSTANCING', 'pwp = instanceMatrix * pwp; pnn = mat3(instanceMatrix) * pnn;', '#endif', 'vPW = (modelMatrix * pwp).xyz; vPN = normalize(mat3(modelMatrix) * pnn);', opts.tex ? 'vT = tid;' : ''].join(NL));
     const fcommon = ['#include <common>', 'varying vec3 vPW; varying vec3 vPN; uniform sampler2D tPaint; uniform float uAmt; uniform float uScale;'];
     if (opts.ground) fcommon.push('uniform sampler2D tCob; uniform sampler2D tGrass;');
+    if (opts.tex) fcommon.push('varying float vT; uniform sampler2D tRoof; uniform sampler2D tWall; uniform sampler2D tFloor;');
     const fcol = ['#include <color_fragment>', 'vec3 bw = pow(abs(normalize(vPN)), vec3(4.0)); bw /= (bw.x + bw.y + bw.z);',
       'float pt = texture2D(tPaint, vPW.zy * uScale).r * bw.x + texture2D(tPaint, vPW.xz * uScale).r * bw.y + texture2D(tPaint, vPW.xy * uScale).r * bw.z;',
       'diffuseColor.rgb *= mix(1.0, pt * 1.2, uAmt);'];
     if (opts.ground) fcol.push('float gr = smoothstep(0.0, 0.06, vColor.g - vColor.r); vec3 sf = mix(texture2D(tCob, vPW.xz * 0.42).rgb * 1.32, texture2D(tGrass, vPW.xz * 0.9).rgb * 1.2, gr); diffuseColor.rgb *= mix(vec3(1.0), sf, bw.y);');
+    if (opts.tex) fcol.push(
+      'vec3 tpx = vec3(1.0);',
+      'if (vT > 0.5 && vT < 1.5) tpx = (texture2D(tRoof, vPW.zy * 0.5).rgb * bw.x + texture2D(tRoof, vPW.xz * 0.5).rgb * bw.y + texture2D(tRoof, vPW.xy * 0.5).rgb * bw.z) * 1.22;',
+      'else if (vT > 1.5 && vT < 2.5) tpx = (texture2D(tWall, vPW.zy * 0.3).rgb * bw.x + texture2D(tWall, vPW.xz * 0.3).rgb * bw.y + texture2D(tWall, vPW.xy * 0.3).rgb * bw.z) * 1.16;',
+      'else if (vT > 2.5 && vT < 3.5) tpx = (texture2D(tFloor, vPW.zy * 0.34).rgb * bw.x + texture2D(tFloor, vPW.xz * 0.34).rgb * bw.y + texture2D(tFloor, vPW.xy * 0.34).rgb * bw.z) * 1.25;',
+      'diffuseColor.rgb *= tpx;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', fcommon.join(NL)).replace('#include <color_fragment>', fcol.join(NL));
   };
   return mat;
@@ -3462,7 +3489,8 @@ function initWorld(canvas) {
   FX = window.ArenaCore ? ArenaCore.render.setup(renderer, scene, camera, { tonlama: 'neutral', pozlama: 1.1, ortam: 0.1, bloom: false, vinyet: 0.22, grain: 0.03, renk: { doygunluk: 1.08, kontrast: 1.05 } }) : null;
   wmat.sprite = softSprite();
   wmat.brush = brushTexture(); wmat.cobble = cobbleTexture(); wmat.grass = grassTexture();
-  wmat.solid = paintify(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 'solid');
+  ptInit();
+  wmat.solid = paintify(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 'solid', { tex: true });
   wmat.ground = paintify(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 'ground', { ground: true, amt: 0.45 });
   wmat.solidNoVC = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   wmat.win = new THREE.MeshBasicMaterial({ color: 0xBFD9E8 });
@@ -3593,7 +3621,10 @@ function updateStaff(dt, vdt) {
     const seller = w.assign && w.assign.k === 'spot';
     if (CH.ready) {
       const sway = roll * 2.2 - (mode === 'work' ? (lean - 0.04) * 0.4 : 0);
-      chPush(CH.fig, a.x, y + bob * 1.4, a.z, a.yaw, seller ? CH_CELL.seller : CH_CELL.baker[w.id % 4], 2.3, sway);
+      const cell = seller ? CH_CELL.seller : CH_CELL.baker[w.id % 4];
+      // cila: while the burn alarm is on, the woman baker at the oven shows the sad pose (visual only; picking and the sim do not change)
+      if (burnOn && cell === 0 && mode === 'work' && w.assign.id === 'oven') chPush(CH.sad, a.x, y + bob * 1.4, a.z, a.yaw, 1, 2.3, sway);
+      else chPush(CH.fig, a.x, y + bob * 1.4, a.z, a.yaw, cell, 2.3, sway);
       if (seller && w.s && trayCount(w) > 0) chPush(CH.tray, a.x, y + bob * 1.4 + 2.3 * CH.k * CH.uStr.value * 0.93, a.z, 0, 0, 1.45, sway);
     } else if (seller && w.s && trayCount(w) > 0 && trays < 8) {
       _rm.compose(_rp.set(a.x, y + bob + 1.66, a.z), _rq.identity(), _rs.set(1, 1, 1)); trayMesh.setMatrixAt(trays++, _rm);
@@ -3735,6 +3766,15 @@ function burnCue() {
   if (d) d.classList.toggle('burn-alarm', burning);
 }
 const _moneyV = new THREE.Vector3();
+// cila: a small sad simitçi pops up over the oven when a tray burns (DOM only: no three.js object, no random numbers)
+function sadBubble() {
+  if (ui.quiet || !world.ready) return;
+  const host = $('moneyFx'); if (!host || host.querySelectorAll('.sadfx').length >= 2) return;
+  _moneyV.set(-8.4, FLOOR_Y + 3.4, 1.2).project(camera); if (_moneyV.z >= 1) return;
+  const el = document.createElement('div'); el.className = 'sadfx';
+  el.style.left = clamp((_moneyV.x * 0.5 + 0.5) * innerWidth, 40, innerWidth - 40) + 'px'; el.style.top = clamp((-_moneyV.y * 0.5 + 0.5) * innerHeight, 150, innerHeight - 110) + 'px';
+  el.innerHTML = img3('poz-uzgun'); host.appendChild(el); setTimeout(() => el.remove(), 2700);
+}
 function spawnFloatingMoney(spot, amount, whoId) {
   const host = $('moneyFx') || $('labels') || document.body;
   if (!host) return;
@@ -4339,7 +4379,7 @@ function toast(msg, kind, icon) {
   if (ui.quiet) return;
   const now = performance.now(); if (ui.lastToast[msg] && now - ui.lastToast[msg] < 2500) return; ui.lastToast[msg] = now;
   const host = $('toasts'), el = document.createElement('div'); el.className = 'toast glass ' + (kind || 'info');
-  el.innerHTML = ic(icon || (kind === 'bad' ? 'warn' : kind === 'good' ? 'check' : 'info')) + '<span>' + msg + '</span>';
+  el.innerHTML = (icon === 'sad' ? img3('poz-uzgun') : ic(icon || (kind === 'bad' ? 'warn' : kind === 'good' ? 'check' : 'info'))) + '<span>' + msg + '</span>';
   host.appendChild(el); while (host.children.length > 4) host.removeChild(host.firstChild);
   setTimeout(() => el.classList.add('out'), 3400); setTimeout(() => el.remove(), 3900);
 }
@@ -4907,7 +4947,9 @@ function showSummary(L) {
   if (pqT >= 10 && pq[2] / pqT > 0.15) tips.push(t('tip_over')); if (pqT >= 10 && pq[0] / pqT > 0.15) tips.push(t('tip_under'));
   if (!tips.length) tips.push(t('tip_ok'));
   const row = (k, v, cls) => '<tr><td>' + k + '</td><td class="' + (cls || '') + '">' + v + '</td></tr>';
-  let h = '<h1>' + t('sum_title', L.day) + '</h1><div class="sub row">' + ic(weatherIcon(L.weather)) + t('wx_' + L.weather) + '</div>';
+  // cila: a bad day shows the sad (worried when the oven burnt) simitçi, a good one the cheerful one
+  const bad = (L.sat < 0.7 && L.missed > 8) || L.burnt > 2 || S.lira < 150 || net < 0;
+  let h = '<h1>' + img3(bad ? (L.burnt > 2 ? 'poz-endise' : 'poz-uzgun') : 'poz-simitci', 'big') + ' ' + t('sum_title', L.day) + '</h1><div class="sub row">' + ic(weatherIcon(L.weather)) + t('wx_' + L.weather) + '</div>';
   h += '<table class="t" style="margin-top:8px">' + row(t('sum_rev'), money(L.rev)) + row(t('sum_contract'), money(L.contractRev)) + row(t('sum_buy'), '-' + money(L.bought), 'up') + row(t('sum_invest'), '-' + money(L.invest), 'up') + row(t('sum_fines'), '-' + money(L.fines), 'up') + row(t('sum_wages'), '-' + money(L.wages), 'up') + row(t('sum_rent'), '-' + money(L.rent), 'up') + row(t('sum_fuel'), '-' + money(L.fuel), 'up') + row('<b>' + t('sum_net') + '</b>', '<b class="' + (net >= 0 ? 'dn' : 'up') + '">' + (net >= 0 ? '+' : '') + money(net) + '</b>') + '</table>';
   h += '<div class="statgrid"><div class="stat"><div class="v">' + num(L.sold) + '</div><div class="k">' + t('sum_sold') + '</div></div><div class="stat"><div class="v">' + num(L.missed) + '</div><div class="k">' + t('sum_missed') + '</div></div><div class="stat"><div class="v">' + num(L.burnt) + '</div><div class="k">' + t('sum_burnt') + '</div></div><div class="stat"><div class="v">' + num(L.wasted) + '</div><div class="k">' + t('sum_wasted') + '</div></div><div class="stat"><div class="v">' + num(L.gold || 0) + '</div><div class="k">' + t('sum_gold') + '</div></div></div>';
   if (pqT) h += '<div class="sub" style="margin:-4px 0 8px">' + ic('dough') + ' ' + t('sum_quality', Math.round(pq[1] / pqT * 100), num(pq[0]), num(pq[2])) + '</div>';
@@ -4928,7 +4970,7 @@ function showEnd(res) {
   if (unlockedList().length === PRODUCT_IDS.length) arenaAward('menu', 'aw_menu');
   const title = res === 'won' ? t('win_title') : res === 'bankrupt' ? t('lose_title') : t('time_title');
   const text = res === 'won' ? t('win_text', S.day, money(S.lira), S.rep.toFixed(1)) : res === 'bankrupt' ? t('lose_text') : t('time_text', S.day, money(S.lira), S.rep.toFixed(1));
-  const fig = res === 'won' ? img3('poz-simitci') + img3('tabla', 'simit') + img3('poz-turist') : res === 'bankrupt' ? img3('poz-usta') + img3('un', 'simit') : img3('poz-simitci') + img3('urun-simit', 'simit');
+  const fig = res === 'won' ? img3('poz-simitci') + img3('tabla', 'simit') + img3('poz-turist') : res === 'bankrupt' ? img3('poz-aglayan') + img3('un', 'simit') : img3('poz-hayal') + img3('urun-simit', 'simit');   // cila: sad poses on the lost cards
   let h = '<div style="text-align:center"><div class="endfig">' + fig + '</div><h1>' + title + '</h1><p class="sub">' + text + '</p>' + (rec ? '<p class="newrec">' + ic('star') + ' ' + t('new_record') + '</p>' : '') + '</div>';
   h += '<div class="statgrid"><div class="stat"><div class="v">' + S.day + '</div><div class="k">' + t('days_played') + '</div></div><div class="stat"><div class="v">' + money(S.lira) + '</div><div class="k">' + t('lira') + '</div></div><div class="stat"><div class="v">' + S.rep.toFixed(1) + '</div><div class="k">' + t('stars') + '</div></div></div>';
   if (dailyLine) h += '<p class="sub" style="text-align:center" id="enDaily">' + dailyLine + '</p>';
@@ -5066,13 +5108,13 @@ listeners.push((type, d) => {
     }
     case 'burnt': {
       triggerBurnAlarm(6000);
-      toast(t('tst_burnt'), 'bad', 'flame');
+      toast(t('tst_burnt'), 'bad', 'sad'); sadBubble();
       SFX.burn();
       break;
     }
     case 'ovenunattended': {
       triggerBurnAlarm(6000);
-      toast(t('tst_oven_unattended'), 'bad', 'flame');
+      toast(t('tst_oven_unattended'), 'bad', 'sad'); sadBubble();
       SFX.burn();
       break;
     }
@@ -5083,7 +5125,7 @@ listeners.push((type, d) => {
     }
     case 'delivery': toast(t('tst_delivery', d.qty, t('i_' + d.k)), 'info', 'van'); if (!ui.quiet) { startVan(); SFX.van(); } break;
     case 'contractok': toast(t('tst_cok', money(d.pay)), 'good', 'check'); SFX.good(); break;
-    case 'contractfail': toast(t('tst_cfail', money(d.fine)), 'bad', 'warn'); SFX.bad(); break;
+    case 'contractfail': toast(t('tst_cfail', money(d.fine)), 'bad', 'sad'); SFX.bad(); break;
     case 'skill': { const w = S.workers.find(x => x.id === d.id); if (w) toast(t('tst_skill', w.name), 'good', 'star'); break; }
     case 'dayend': onDayEnd(d); break;
   }
