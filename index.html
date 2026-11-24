@@ -34,7 +34,7 @@ window.__bootLang = (function () {
 })();
 requestAnimationFrame(function () { var m = document.getElementById('loadmsg'); if (m && !window.__t) m.textContent = window.__bootLang === 'en' ? 'Loading… 0/2' : 'Yükleniyor… 0/2'; });
 window.addEventListener('error', function (e) { window.__errors.push(String(e.message || e) + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
-window.__bootTimer = setTimeout(function () { var m = document.getElementById('loadmsg'); if (m) m.textContent = window.__t ? window.__t('loadfail') : (window.__bootLang === 'en' ? 'Could not load Three.js. Check your connection and reload the page.' : 'Three.js yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.'); }, 12000);
+window.__bootTimer = setTimeout(function () { var m = document.getElementById('loadmsg'); if (m) { m.className = 'err'; var h = document.getElementById('tHow'); if (h && h.parentNode) h.parentNode.insertBefore(m, h); var pb = document.getElementById('bPlay'); if (pb && !pb.textContent) pb.textContent = window.__bootLang === 'en' ? 'Play' : 'Oyna'; } if (m) m.textContent = window.__t ? window.__t('loadfail') : (window.__bootLang === 'en' ? 'Could not load Three.js. Check your connection and reload the page.' : 'Three.js yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.'); }, 12000);
 window.addEventListener('unhandledrejection', function (e) { window.__errors.push('promise: ' + String(e.reason && e.reason.message || e.reason)); });
 </script>
 <style>
@@ -735,6 +735,7 @@ select.sel option { background: var(--paper-bg); color: var(--paper-ink); }
 #inBody .ver { color: var(--gold); font-weight: 700; margin: 0 0 8px; }
 .bunting { position: absolute; left: 0; right: 0; top: 0; height: 42px; pointer-events: none; }
 .bunting svg { width: 100%; height: 100%; display: block; }
+#loadmsg.err { color: #FFD9C9; background: rgba(150, 40, 20, .42); border: 1px solid rgba(255, 170, 130, .5); border-radius: 12px; padding: 10px 14px; line-height: 1.4; margin-top: 12px; }
 #loadmsg { margin-top: 10px; font-size: 13.5px; color: var(--ink-mute); min-height: 20px; font-weight: 600; }
 
 .sliderrow {
@@ -889,6 +890,7 @@ img.f3 { display: block; object-fit: contain; filter: drop-shadow(0 6px 8px rgba
 .endfig { display: flex; justify-content: center; align-items: flex-end; height: 110px; }
 .endfig img.f3 { height: 100%; width: auto; }
 .endfig img.f3.simit { height: 42%; margin: 0 -4px 4px; }
+#suBody > .menu { position: sticky; bottom: 0; z-index: 2; padding: 12px 0 2px; margin-top: 0; background: linear-gradient(180deg, rgba(244, 233, 210, 0), #f4e9d2 34%); }
 .modal h1 img.f3.big { height: 2.5em; margin: -10px 4px 4px -2px; }
 .toast img.f3 { display: inline-block; height: 2.1em; width: auto; flex: none; margin: -6px 2px -6px -4px; }
 .sadfx { position: absolute; width: 0; pointer-events: none; z-index: 14; animation: sadUp 2.6s ease-out forwards; }
@@ -2773,7 +2775,7 @@ const COL = {
   oven: 0xFF7A1A, crust: 0xB5651D, sesame: 0xE6C27A, tile: 0x2C5F8A,
 };
 
-let renderer, scene, camera, sunL, hemiL, canvasEl;
+let renderer, scene, camera, sunL, hemiL, canvasEl, glFail = false;
 let FX = null; // arena-core v2 render preset (set in initWorld)
 const wmat = {};
 const world = { ovenMeshes: [], ovenGlow: [], parts: {}, hit: [], staffMesh: null, ready: false };
@@ -3473,7 +3475,8 @@ function applyTod(hour, weather) {
 
 function initWorld(canvas) {
   canvasEl = canvas;
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
+  catch (e) { glFail = true; renderer = null; window.__errors.push('WebGL: ' + (e && e.message)); return; }   // saglamlik: no WebGL, boot shows a clear message
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lowQ() ? 1 : 1.5)); renderer.shadowMap.enabled = !FLAGS.low && settings.quality !== 'low'; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   attachPerf();
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x8DC9F4); scene.fog = new THREE.Fog(0xB4DAF2, 55, 170);
@@ -4253,6 +4256,7 @@ addTX({
   how3: ['Hedef: {0}. günün sonunda {1} kasa ve {2} yıldız itibar.', 'Goal: by the end of day {0}, {1} in the till and {2} stars.'],
   how4: ['Kaydır: sürükle · Yakınlaştır: tekerlek veya iki parmak.', 'Pan: drag · Zoom: wheel or two fingers.'],
   play: ['Oyna', 'Play'], cont: ['Devam et', 'Continue'], settings: ['Ayarlar', 'Settings'], langBtn: ['EN', 'TR'], langName: ['English', 'Türkçe'],
+  glfail: ['WebGL kullanılamıyor: tarayıcında donanım hızlandırmayı aç ya da başka bir tarayıcı dene.', 'WebGL is unavailable: turn on hardware acceleration or try another browser.'],
   loading: ['Yükleniyor… {0}/{1}', 'Loading… {0}/{1}'], loadfail: ['Three.js yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.', 'Could not load Three.js. Check your connection and reload the page.'],
   best_none: ['Henüz bir sonuç yok.', 'No result yet.'], best_win: ['En iyi: {0}. günde zafer · kasa {1}', 'Best: victory on day {0} · till {1}'], best_run: ['En iyi: {0}. günde {1} kasa', 'Best: {1} on day {0}'],
   day: ['Gün {0}/{1}', 'Day {0}/{1}'], dayEnd: ['Gün {0}', 'Day {0}'],
@@ -4435,6 +4439,7 @@ function applyLang() {
   $('pMenu').innerHTML = '<button class="btn primary" data-act="resume">' + ic('play') + t('resume') + '</button><button class="btn" data-act="restart">' + t('restart') + '</button><button class="btn" data-act="settings">' + ic('gear') + t('settings') + '</button><button class="btn" data-act="mainmenu">' + ic('home') + t('menu') + '</button>';
   const sv = store.get(KEY.save); $('bCont').classList.toggle('hidden', !(sv && sv.S && sv.S.v === 1)); showBest(); dailyButton(); metaTexts();
   if (!ui.loadDone) $('loadmsg').textContent = t('loading', ui.loadN || 0, 2);
+  else if (glFail) showGlFail();
   renderSettings(); if (ui.inGame) { hudUpdate(true); renderSide(true); renderSales(true); if (ui.planOpen) renderPlan(); }
   updateLabels(true);
   if (tutActive) updateTutText();
@@ -5235,7 +5240,7 @@ window.addEventListener('keydown', e => {
 function resizeHudVar() { const h = $('hud').offsetHeight || 56; document.documentElement.style.setProperty('--hudH', h + 8 + 'px'); }
 // the HUD wraps to more rows on narrow screens and its chips change text, so follow its height
 if (window.ResizeObserver) new ResizeObserver(() => { if (ui.inGame) resizeHudVar(); }).observe($('hud'));
-window.addEventListener('resize', () => { resizeRenderer(); fitCamera(); resizeHudVar(); if (tutActive) updateTutPosition(); });
+window.addEventListener('resize', () => { if (glFail) return; resizeRenderer(); fitCamera(); resizeHudVar(); if (tutActive) updateTutPosition(); });
 // hidden tab: the pause menu opens during the day (as before) and the audio stops, following the arena-kit
 // "pause when the tab is hidden" setting; on return the pause menu stays open until the player resumes
 const autoPause = () => { if (ui.inGame && S.phase === 'day' && !ui.paused) setPaused(true); };
@@ -5277,10 +5282,16 @@ function showDebug() {
 }
 
 // ---------- boot ----------
+function showGlFail() {
+  const m = $('loadmsg'); m.className = 'err'; m.textContent = t('glfail'); const h = $('tHow'); if (h && h.parentNode) h.parentNode.insertBefore(m, h);   // above the rules so it is never below the fold
+  for (const id of ['bPlay', 'bDaily', 'bCont']) { const b = $(id); if (b) b.disabled = true; }
+}
 function boot() {
   setLoad(1);
   if (FLAGS.low) settings.quality = 'low';
-  initWorld($('c')); initInput($('c')); initCrowd(); initLabels(); resizeRenderer(); fitCamera();
+  initWorld($('c'));
+  if (glFail) { ui.loadDone = true; applyLang(); showGlFail(); return; }
+  initInput($('c')); initCrowd(); initLabels(); resizeRenderer(); fitCamera();
   initTutListeners();
   newGame(7); S.phase = 'plan';
   applyLang(); ui.loadDone = true; $('loadmsg').textContent = ''; $('bPlay').disabled = false; $('bDaily').disabled = false; $('bPlay').focus();
