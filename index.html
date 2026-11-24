@@ -903,6 +903,20 @@ img.pi3 { display: inline-block; width: 26px; height: 22px; object-fit: contain;
 @media (max-width: 520px) and (min-height: 561px) { #title .logo3 { height: 70px; } }
 @media (max-height: 800px) and (min-width: 521px) { #title .logo3 { height: 92px; } .endfig { height: 72px; } }
 @media (max-height: 560px) { #title .logo3 { height: 70px; } .endfig { height: 56px; } }
+/* short desktop screens (1280x720, 1366x768): the whole title card fits without scrolling */
+@media (max-height: 800px) and (min-height: 561px) and (min-width: 521px) {
+  #title .box { padding-top: 30px; padding-bottom: 16px; }
+  #title .logo3 { height: 74px; margin-top: -2px; }
+  #title h1 { font-size: 46px; margin: 2px 0 0; }
+  #title .tag1 { margin: 2px 0 10px; font-size: 14.5px; }
+  #title .how { font-size: 13px; line-height: 1.35; padding: 8px 14px 8px 30px; }
+  #title .how li { margin-bottom: 2px; }
+  #title .menu { gap: 8px; margin-top: 10px; }
+  #title .menu .btn { min-height: 42px; font-size: 15px; }
+  #title .menu .btn.primary { min-height: 46px; font-size: 18px; }
+  #title .best { margin-top: 6px; }
+  #title .meta { margin-top: 2px; }
+}
 @media (max-height: 480px) { #title .logo3 { height: 52px; } .endfig { height: 44px; } }
 @media (max-width: 680px) { #hud .brand img.f3 { width: 28px; height: 28px; } }
 </style>
