@@ -3269,29 +3269,42 @@ function chibiEnd() {
 }
 function stilKur() {
   // loads the style textures; everything three.js builds here uses the private random stream
+  if (Q.has('nostil')) return;   // ?nostil: the old drawn people and props (comparison / debugging)
   sakin(() => {
     const load = (p) => new Promise(res => new THREE.TextureLoader().load('assets/3d/' + p, t => res(t), undefined, () => res(null)));
-    Promise.all(['chibi.webp', 'tabla.webp', 'firin.webp', 'tezgah.webp'].map(load)).then(tx => sakin(() => {
+    Promise.all(['chibi.webp', 'tabla.webp', 'firin.webp', 'tezgah.webp'].map(load)).then(tx => {
       if (tx.some(t => !t)) return; // a missing file keeps the old meshes
-      CH.fig = chLayer(tx[0], 3, 100, true);
-      CH.tray = chLayer(tx[1], 1, 8, false);
       // oven and counter: upright cut-outs turned to the (fixed) camera heading, set a little behind the old model so
       // the bread in the oven slots and the customers at the counter stay in front
       CH.props = [];
       const prop = (tex, w, h, x, y, z) => {
-        tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5 }));
         m.rotation.y = 0.62; m.position.set(x - Math.sin(0.62), y, z - Math.cos(0.62)); scene.add(m); CH.props.push(m); return m;
       };
-      CH.ovens = [0, 1].map(i => prop(tx[2], 4.4, 4.4, -8.4, FLOOR_Y + 0.05, i === 0 ? -0.6 : 3.0));
-      CH.counter = prop(tx[3], 2.9, 3.6, 3.0, FLOOR_Y, 1.9);
-      for (const o of world.ovenMeshes) o.visible = false;
-      if (world.parts.counter) world.parts.counter.visible = false;
-      for (const C of [world.staff, world.pub]) for (const m of C.meshes) m.visible = false;
-      trayMesh.visible = false;
-      CH.ready = true;
-    }));
+      const up = (t, an) => () => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = an; renderer.initTexture(t); };
+      // one GPU job every few frames (texture upload, then the objects whose shaders compile on their first draw):
+      // on a slow or busy GPU, uploading and compiling everything in one frame could lose the WebGL context
+      CH.queue = [
+        up(tx[0], 2), () => { CH.fig = chLayer(tx[0], 3, 100, true); },
+        up(tx[1], 2), () => { CH.tray = chLayer(tx[1], 1, 8, false); },
+        up(tx[2], 4), () => { CH.ovens = [0, 1].map(i => prop(tx[2], 4.4, 4.4, -8.4, FLOOR_Y + 0.05, i === 0 ? -0.6 : 3.0)); },
+        up(tx[3], 4), () => { CH.counter = prop(tx[3], 2.9, 3.6, 3.0, FLOOR_Y, 1.9); },
+        () => {
+          for (const o of world.ovenMeshes) o.visible = false;
+          if (world.parts.counter) world.parts.counter.visible = false;
+          for (const C of [world.staff, world.pub]) for (const m of C.meshes) m.visible = false;
+          trayMesh.visible = false;
+          CH.ready = true;
+        },
+      ];
+      CH.qt = 0;
+    });
   });
+}
+function stilAdim() {
+  // runs the next queued style job (every 6th frame), inside the private random stream
+  if (!CH.queue || !CH.queue.length || renderer.getContext().isContextLost() || ++CH.qt % 6) return;   // never while the GPU context is lost
+  const job = CH.queue.shift(); sakin(job);
 }
 
 // ---------- rings (simit, pastries) ----------
@@ -5204,7 +5217,7 @@ function frame(now) {
   const vdt = ui.paused || (ui.inGame && modalBlocking() && !open$('title')) ? 0 : (running ? dtReal * Math.min(ui.speed, 2) : (ui.inGame ? dtReal : dtReal));
   if (!ui.inGame) { titleAng += dtReal; cam.az = 0.62 + Math.sin(titleAng * 0.12) * 0.12; placeCamera(); }
   updateScenery(vdt);
-  chibiFrame();
+  stilAdim(); chibiFrame();
   updateStaff(dtReal, vdt);
   updateCrowd(vdt);
   chibiEnd();
